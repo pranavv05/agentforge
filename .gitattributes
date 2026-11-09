@@ -1,0 +1,27 @@
+# Normalise line endings to LF in the working copy on every platform.
+#
+# Prettier is configured with `endOfLine: "lf"`, so without this a clone on Windows
+# (where core.autocrlf defaults to true) would check out CRLF files and
+# `npm run format:check` would fail locally while passing in CI on Linux. That is a
+# confusing first experience for anyone joining the frontend track.
+* text=auto eol=lf
+
+# Keep the lockfile out of diffs; it is generated, and reviewing it line by line is noise.
+package-lock.json -diff linguist-generated
+
+# SQL migrations are the schema's source of truth and are reviewed closely, so they
+# stay fully diffable.
+*.sql text eol=lf
+
+# Binary assets, should any arrive (tree-sitter grammars, images, fonts).
+*.wasm binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.db binary
