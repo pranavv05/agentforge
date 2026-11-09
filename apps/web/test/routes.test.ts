@@ -62,7 +62,10 @@ function implementedRoutes(): readonly string[] {
   return found.sort();
 }
 
-const manifestPaths = new Set(Object.values(ROUTES).map((r) => r.path));
+// Widened to Set<string> deliberately: ROUTES is `as const`, so the inferred element
+// type is a union of literal paths, and the filesystem paths being compared are plain
+// strings.
+const manifestPaths = new Set<string>(Object.values(ROUTES).map((r) => r.path));
 
 describe('route manifest', () => {
   it('declares a plausible number of routes', () => {
