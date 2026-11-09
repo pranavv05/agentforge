@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.log
+
+# secrets
+.env
+.env.local
+.env.*.local
+
+# local state
+*.db
+*.db-wal
+*.db-shm
+.sdd/
+data/
+.eval-cache/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

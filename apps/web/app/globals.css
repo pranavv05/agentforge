@@ -1,0 +1,146 @@
+/*
+ * Base styles only.
+ *
+ * The UI is the juniors' track: this file deliberately stays a minimal, neutral
+ * baseline (tokens, resets, a few primitives) rather than an opinionated design, so
+ * their work is not fighting styles written here. It defines colours as tokens with a
+ * dark-mode block, so whatever they build inherits a coherent palette.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --border: #e4e4e1;
+  --text: #1a1a18;
+  --muted: #6b6b66;
+  --accent: #2f5c48;
+  --ok: #1f7a4d;
+  --warn: #8a6100;
+  --danger: #a32b2b;
+
+  --radius: 6px;
+  --gutter: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #15161a;
+    --surface: #1d1f24;
+    --border: #2f3238;
+    --text: #e9e9e6;
+    --muted: #9a9a95;
+    --accent: #7cc0a3;
+    --ok: #63c58d;
+    --warn: #d9a637;
+    --danger: #e26d6d;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #15161a;
+  --surface: #1d1f24;
+  --border: #2f3238;
+  --text: #e9e9e6;
+  --muted: #9a9a95;
+  --accent: #7cc0a3;
+  --ok: #63c58d;
+  --warn: #d9a637;
+  --danger: #e26d6d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px var(--gutter) 64px;
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 14px var(--gutter);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  font-weight: 650;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 0 0 12px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}

@@ -1,0 +1,88 @@
+name: CI
+
+# Every gate from the project's quality bar runs here, on every push and pull request.
+# A red build blocks merge — including for the frontend track, which depends on the
+# same contract package and the same formatting rules.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  # A newer push supersedes an in-flight run on the same ref.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Tests create their own temp databases; this is the path the migration-drift
+      # step uses, kept inside the workspace so nothing escapes the runner.
+      SDD_DB_PATH: ./data/ci.db
+      SDD_RUN_COST_CAP_USD: '2.00'
+      # No API key in CI: the agent suites run from recorded cassettes, so a green
+      # build never depends on a live model call or costs anything.
+      SDD_CASSETTE_MODE: replay
+      LOG_LEVEL: silent
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      # `better-sqlite3` and `esbuild` need their install scripts, which npm 11 blocks
+      # by default; they are allow-listed in package.json under `allowScripts`.
+      - name: Install
+        run: npm ci
+
+      - name: Verify native modules loaded
+        run: node -e "const D=require('better-sqlite3'); const d=new D(':memory:'); d.exec(\"create virtual table t using fts5(x)\"); console.log('sqlite', d.prepare('select sqlite_version() v').get().v, 'with FTS5');"
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck web app
+        run: npm run typecheck --workspace @agentforge/web
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      # Proves the committed SQL applies cleanly from scratch. The Drizzle mirror and the
+      # contract enum lists are compared against the resulting database by
+      # packages/db/test/drift.test.ts in the test step below.
+      - name: Migrations apply from scratch
+        run: npm run db:migrate
+
+      - name: Migrations are idempotent
+        run: npm run db:migrate
+
+      - name: Seed fixtures
+        run: npm run db:seed
+
+      # Includes the exhaustive transition matrix, the hash-binding governance tests,
+      # the schema-drift guard, the renderer golden files and API conformance, with the
+      # coverage thresholds enforced.
+      - name: Test with coverage
+        run: npm run test:cov
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: warn

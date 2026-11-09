@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@agentforge/contract": ["./packages/contract/src/index.ts"],
+      "@agentforge/db": ["./packages/db/src/index.ts"],
+      "@agentforge/orchestrator": ["./packages/orchestrator/src/index.ts"],
+      "@agentforge/llm": ["./packages/llm/src/index.ts"],
+      "@agentforge/agents": ["./packages/agents/src/index.ts"],
+      "@agentforge/context-agent": ["./packages/context-agent/src/index.ts"],
+      "@agentforge/compliance": ["./packages/compliance/src/index.ts"],
+      "@agentforge/skills": ["./packages/skills/src/index.ts"],
+      "@agentforge/eval": ["./packages/eval/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "scripts/**/*.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist", "apps/web/.next"]
+}
