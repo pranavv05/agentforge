@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { getAuth } from '@/lib/auth';
 import './auth.css';
 
 /**
@@ -10,8 +13,26 @@ import './auth.css';
  * able to name you, and saying so is more useful than a stock illustration.
  *
  * No smooth scrolling and no scroll animation here. The page does not scroll.
+ *
+ * An already-signed-in visitor is sent on rather than shown a sign-in form. Landing on
+ * a login page while logged in reads as "your session expired", which is both wrong and
+ * alarming on a tool whose records are attributed to you.
  */
-export default function AuthLayout({ children }: { children: ReactNode }) {
+/*
+ * Rendered per request, never prerendered.
+ *
+ * This layout reads the session cookie to bounce an already-signed-in visitor, so its
+ * output depends on who is asking. Without this, the build tries to statically export
+ * /sign-in and /sign-up, which evaluates the auth config at build time — with
+ * NODE_ENV=production and none of the runtime environment — and fails on the missing
+ * session secret.
+ */
+export const dynamic = 'force-dynamic';
+
+export default async function AuthLayout({ children }: { children: ReactNode }) {
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (session !== null) redirect('/specs');
+
   return (
     <div className="auth">
       <div className="auth__panel">

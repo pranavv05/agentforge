@@ -21,6 +21,17 @@ import './app.css';
  * row that highlights — and that is a deliberate split from the marketing surface, not
  * an omission.
  */
+/*
+ * Rendered per request for the whole group.
+ *
+ * Every screen under (app) sits behind the session check below, so none of them can be
+ * prerendered: a static build would evaluate the auth config with none of the runtime
+ * environment present, and would in any case be caching a page whose content depends on
+ * who is signed in. Declaring it on the layout means a page added later inherits it,
+ * rather than failing the build until someone remembers.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getAuth().api.getSession({ headers: await headers() });
 
@@ -47,6 +58,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               Compliance pack
             </Link>
           </nav>
+
+          <Link className="btn btn--primary btn--sm app__new" href="/specs/new">
+            New spec
+          </Link>
 
           <div className="app__user">
             <span className="app__userName">

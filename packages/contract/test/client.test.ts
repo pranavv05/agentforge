@@ -184,18 +184,29 @@ describe('request validation', () => {
 });
 
 describe('headers and paths', () => {
-  it('sends the actor header when configured', async () => {
+  it('sends the session cookie and never an actor header', async () => {
+    // Identity used to travel in an `x-agentforge-actor` header, which meant a caller
+    // could name themselves anything in the audit log. The server resolves the actor
+    // from the signed session now, so this asserts both halves: the cookie goes, and
+    // the spoofable header does not exist.
     const { fetch, calls } = stubFetch(200, { specs: [], total: 0 });
-    const client = createClient({
-      baseUrl: 'http://test',
-      fetch,
-      actor: 'lead@agentforge.local',
-    });
+    const client = createClient({ baseUrl: 'http://test', fetch });
 
     await client.listSpecs();
 
+    expect(calls[0]?.init?.credentials).toBe('same-origin');
+
     const headers = calls[0]?.init?.headers as Record<string, string> | undefined;
-    expect(headers?.['x-agentforge-actor']).toBe('lead@agentforge.local');
+    expect(headers?.['x-agentforge-actor']).toBeUndefined();
+  });
+
+  it('allows credentials to be widened for a cross-origin backend', async () => {
+    const { fetch, calls } = stubFetch(200, { specs: [], total: 0 });
+    const client = createClient({ baseUrl: 'http://test', fetch, credentials: 'include' });
+
+    await client.listSpecs();
+
+    expect(calls[0]?.init?.credentials).toBe('include');
   });
 
   it('encodes a spec id containing unusual characters', async () => {

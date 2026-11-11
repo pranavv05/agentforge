@@ -45,12 +45,19 @@ export interface ClientOptions {
   /** Injected for tests; defaults to the global `fetch`. */
   readonly fetch?: typeof globalThis.fetch;
   /**
-   * Reviewer identity, sent as `x-agentforge-actor`.
+   * Send credentials with each request.
    *
-   * The server always treats an HTTP caller as a `human` regardless of this value, so
-   * it names the reviewer for the audit log; it is not a privilege claim.
+   * Defaults to `same-origin`, which is what the application wants: the session cookie
+   * goes to its own backend and nowhere else. Set it to `include` only when the client
+   * is deliberately talking to a backend on another origin.
+   *
+   * There is no `actor` option. Identity used to travel in an `x-agentforge-actor`
+   * header, which meant any caller could name themselves anything in the audit log.
+   * The server now resolves the actor from the signed session and ignores that header
+   * entirely, so an option for it would be a lie about who a decision is recorded
+   * against.
    */
-  readonly actor?: string;
+  readonly credentials?: 'omit' | 'same-origin' | 'include';
 }
 
 /** Thrown when a response cannot be parsed against its contract schema. */
@@ -81,6 +88,9 @@ function withQuery(path: string, query?: Query): string {
 export function createClient(options: ClientOptions = {}) {
   const baseUrl = (options.baseUrl ?? '').replace(/\/$/, '');
   const doFetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  // Same-origin by default: every route behind this client requires a session, and the
+  // cookie that carries it has to actually be sent.
+  const credentials = options.credentials ?? 'same-origin';
 
   async function request<T>(
     route: string,
@@ -89,11 +99,11 @@ export function createClient(options: ClientOptions = {}) {
   ): Promise<T> {
     const headers: Record<string, string> = { accept: 'application/json' };
     if (init.body !== undefined) headers['content-type'] = 'application/json';
-    if (options.actor !== undefined) headers['x-agentforge-actor'] = options.actor;
 
     const response = await doFetch(`${baseUrl}${init.path}`, {
       method: init.method,
       headers,
+      credentials,
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     });
 

@@ -60,6 +60,9 @@ export default function SpecsPage() {
             Load the fixture data with <code>npm run db:seed</code> to see three specs at different
             points in the lifecycle, or create one to start from a feature request.
           </p>
+          <Link className="btn btn--accent" href="/specs/new">
+            Create a spec
+          </Link>
         </div>
       ) : (
         <ol className="specs">
