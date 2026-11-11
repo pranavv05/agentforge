@@ -370,11 +370,15 @@ describe('decisions are only accepted at the gate', () => {
   });
 
   it('refuses a decision on an artifact kind that has no gate', () => {
+    // `context`, not `tasks`. Tasks gained a real gate: approving them is what releases
+    // the spec for implementation, and that edge is where the PreToolUse hook starts
+    // permitting file edits. Context has no gate — it is evidence the later stages build
+    // on, and its trustworthiness comes from the verifier rather than from a signature.
     const spec = makeSpec(db, 'brownfield');
     expect(() =>
       decideArtifact(db, {
         specId: spec.id,
-        kind: 'tasks',
+        kind: 'context',
         contentHash: 'a'.repeat(64),
         decision: 'approve',
         actor: HUMAN,

@@ -117,8 +117,14 @@ function actionFor(status: SpecState, mode: 'greenfield' | 'brownfield'): Action
 
 /** What the bar says when there is nothing to press. */
 function restingNote(status: SpecState): string {
+  if (status === 'TASKS_GENERATED') {
+    return 'Open the tasks to release them for implementation. File edits stay blocked until you do.';
+  }
   if (status === 'REQ_AWAITING_APPROVAL' || status === 'DESIGN_AWAITING_APPROVAL') {
     return 'Open the document to approve, request changes, or reject.';
+  }
+  if (status === 'READY_FOR_IMPLEMENTATION' || status === 'IMPLEMENTING') {
+    return 'Released. Claude Code can now claim tasks through the MCP server, and the PreToolUse hook permits edits.';
   }
   if (status.endsWith('_DRAFTING') || status === 'CONTEXT_SCANNING') {
     return 'A previous attempt did not finish. Nothing was written, so running again is safe.';

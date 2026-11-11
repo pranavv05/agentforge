@@ -68,6 +68,11 @@ export const AWAITING_HUMAN_STATES = [
   'REQ_AWAITING_CLARIFICATION',
   'REQ_AWAITING_APPROVAL',
   'DESIGN_AWAITING_APPROVAL',
+  // Tasks wait for a human too: approving them is what releases the spec for
+  // implementation. Leaving it out meant a spec sat at this gate without the interface
+  // ever saying it needed anyone — which is how it went unnoticed that nothing in the
+  // product performed that transition at all.
+  'TASKS_GENERATED',
 ] as const;
 
 export type AwaitingHumanState = (typeof AWAITING_HUMAN_STATES)[number];

@@ -151,7 +151,7 @@ export function driveTo(db: Db, specId: string, target: SpecState): void {
     transition(db, { specId, from: spec.status, to, actor, expectedVersion: spec.version });
   };
 
-  const approve = (kind: 'requirements' | 'design'): void => {
+  const approve = (kind: 'requirements' | 'design' | 'tasks'): void => {
     const spec = current();
     const head = getHeadArtifact(db, specId, kind);
     if (head === undefined) throw new Error(`no ${kind} artifact to approve`);
@@ -191,7 +191,10 @@ export function driveTo(db: Db, specId: string, target: SpecState): void {
       step('TASKS_GENERATED');
     },
     () => {
-      step('READY_FOR_IMPLEMENTATION');
+      // An approval, not a plain step. Releasing for implementation is the gate past
+      // which the PreToolUse hook permits file edits, so the edge is human-only and
+      // binds to the tasks content hash like the two gates before it.
+      approve('tasks');
     },
     () => {
       step('IMPLEMENTING');
