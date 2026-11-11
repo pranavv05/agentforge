@@ -1,0 +1,787 @@
+/*
+ * The marketing surface.
+ *
+ * Scoped to `.marketing` so nothing here can leak into the application shell, which has
+ * the opposite requirements. The whole visual argument is three things: a large
+ * neo-grotesque display face with tight tracking, hairlines instead of shadows, and one
+ * accent that is spent only on action and live state.
+ */
+
+.marketing {
+  overflow-x: clip;
+}
+
+/* ------------------------------------------------------------------- nav */
+
+/*
+ * The bar is transparent over the hero, gains a solid ground once the page moves, and
+ * slides away while the reader is going down. Solid rather than translucent on purpose:
+ * a blurred bar over the inverted band reads as a grey stripe across the black.
+ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    transform var(--dur) var(--ease-io),
+    background var(--dur) var(--ease-io),
+    border-color var(--dur) var(--ease-io);
+}
+
+body.is-scrolled .nav {
+  background: var(--ground);
+  border-bottom-color: var(--hairline);
+}
+
+body.is-nav-hidden .nav {
+  transform: translateY(-100%);
+}
+
+/* Someone who asked for reduced motion keeps a bar that simply stays put. */
+@media (prefers-reduced-motion: reduce) {
+  body.is-nav-hidden .nav {
+    transform: none;
+  }
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  min-height: 4.25rem;
+}
+
+.nav__brand {
+  margin-right: auto;
+}
+
+.nav__links {
+  display: none;
+  gap: var(--s-5);
+}
+
+.nav__link {
+  position: relative;
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding-block: 0.25rem;
+  transition: color var(--dur-fast) var(--ease-io);
+}
+
+.nav__link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.nav__link:hover {
+  color: var(--ink);
+}
+
+.nav__link:hover::after {
+  transform: scaleX(1);
+}
+
+.nav__link--quiet::after {
+  display: none;
+}
+
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.btn--sm {
+  padding: 0.55rem 1.05rem;
+  font-size: var(--t-micro);
+}
+
+@media (min-width: 62rem) {
+  .nav__links {
+    display: flex;
+  }
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.hero {
+  padding-block: clamp(2.25rem, 5.5vw, 5rem) clamp(3rem, 6vw, 6rem);
+}
+
+.hero__inner {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+.hero__title {
+  font-size: var(--t-hero);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+  margin-block: var(--s-4) var(--s-5);
+}
+
+/*
+ * SplitText's mask parents. `overflow: clip` is what makes a line rise out of its own
+ * mask rather than slide over the one above it, and the padding stops descenders being
+ * shaved by the clip.
+ */
+.marketing .split-line {
+  padding-bottom: 0.08em;
+}
+
+.hero__lede {
+  font-size: clamp(1.1rem, 1.55vw, 1.32rem);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+}
+
+@media (min-width: 64rem) {
+  .hero__inner {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: center;
+  }
+}
+
+/* The artifact card ----------------------------------------------------- */
+
+.artifact {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* A single very soft shadow. Depth comes from hairlines; this only lifts the card off
+     the paper enough to read as a surface. */
+  box-shadow:
+    0 1px 2px rgb(18 20 20 / 4%),
+    0 12px 32px -18px rgb(18 20 20 / 18%);
+}
+
+.artifact__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--ground-deep);
+}
+
+.artifact__kind {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  color: var(--ink-soft);
+}
+
+.artifact__rows {
+  margin: 0;
+  padding: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+}
+
+.artifact__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: var(--t-small);
+}
+
+.artifact__row dt {
+  color: var(--muted);
+}
+
+.artifact__row dd {
+  margin: 0;
+  text-align: right;
+  color: var(--ink);
+}
+
+.artifact__evidence {
+  border-top: 1px solid var(--hairline);
+  padding: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+}
+
+/*
+ * Badge on the left, path and symbol stacked beside it. A flex row wrapped
+ * unpredictably — the symbol fell to its own line at some widths and not others — which
+ * made two adjacent rows look misaligned.
+ */
+.evidence {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+  font-size: var(--t-micro);
+}
+
+.evidence code {
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+.evidence__symbol {
+  grid-column: 2;
+  color: var(--muted);
+}
+
+.artifact__foot {
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--hairline);
+  background: var(--ground-deep);
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------- marquee */
+
+.marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--hairline);
+  padding-block: var(--s-3);
+  /* Fades the ends into the ground so the loop has no visible seam. */
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  animation: marquee 48s linear infinite;
+}
+
+.marquee__group {
+  display: flex;
+  gap: var(--s-5);
+  padding-right: var(--s-5);
+}
+
+.marquee__item {
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------- sections */
+
+.section {
+  padding-block: clamp(3.5rem, 7vw, 7rem);
+}
+
+.section--tight {
+  padding-block: clamp(3rem, 6vw, 5.5rem);
+}
+
+.section__title {
+  font-size: var(--t-display);
+  max-width: 24ch;
+}
+
+.section--tight .section__title,
+.section--measured .section__title {
+  max-width: 34ch;
+}
+
+.stack {
+  display: grid;
+  gap: var(--s-4);
+}
+
+/* An inverted band, to break the paper up without introducing a second accent. */
+.section--inverse {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.section--inverse .section__title,
+.section--inverse .point__title {
+  color: var(--ground);
+}
+
+.section--inverse .lede,
+.section--inverse .point__body {
+  color: color-mix(in srgb, var(--ground) 74%, var(--ink));
+}
+
+.section--inverse .eyebrow {
+  color: color-mix(in srgb, var(--ground) 58%, var(--ink));
+}
+
+.section--inverse .eyebrow::before {
+  background: color-mix(in srgb, var(--ground) 32%, var(--ink));
+}
+
+.section--inverse code {
+  color: var(--accent);
+}
+
+/* Claim layout ---------------------------------------------------------- */
+
+.claim {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+.claim__copy {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+
+.points {
+  display: grid;
+  gap: var(--s-5);
+  margin-top: var(--s-4);
+}
+
+.point__title {
+  font-size: var(--t-section);
+  margin-bottom: var(--s-2);
+}
+
+.point__body {
+  color: var(--ink-soft);
+  font-size: var(--t-small);
+  max-width: 54ch;
+}
+
+.claim__visual {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+
+@media (min-width: 68rem) {
+  .claim {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .claim--reverse .claim__copy {
+    order: 2;
+  }
+}
+
+/*
+ * The visual holds its place while the copy scrolls past it. Without this, a short
+ * visual beside a tall column of points leaves a large empty well, which was the most
+ * obvious flaw on the first pass.
+ *
+ * Gated on viewport *height* as well as width. A sticky element taller than the viewport
+ * has its lower half permanently out of reach, and giving it its own scroll area just
+ * puts a second scrollbar inside the page. Below this height it simply flows.
+ */
+@media (min-width: 68rem) and (min-height: 50rem) {
+  .claim__visual {
+    position: sticky;
+    top: 6rem;
+  }
+}
+
+/* Terminal -------------------------------------------------------------- */
+
+.terminal {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.section--inverse .terminal {
+  border-color: color-mix(in srgb, var(--ground) 18%, var(--ink));
+  background: color-mix(in srgb, var(--ground) 6%, var(--ink));
+}
+
+.terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--ground-deep);
+}
+
+.terminal__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ok);
+  flex: none;
+}
+
+.terminal__dot--warn {
+  background: var(--warn);
+}
+
+.terminal__title {
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+.terminal__body {
+  margin: 0;
+  padding: var(--s-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  tab-size: 2;
+}
+
+.terminal__note {
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+/* Scoreboard ----------------------------------------------------------- */
+
+.scoreboard {
+  border: 1px solid color-mix(in srgb, var(--ground) 18%, var(--ink));
+  border-radius: var(--radius);
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--ground) 5%, var(--ink));
+}
+
+.scoreboard__big {
+  display: grid;
+  gap: 0.2rem;
+  padding-block: var(--s-4) var(--s-5);
+  border-bottom: 1px solid color-mix(in srgb, var(--ground) 14%, var(--ink));
+}
+
+.scoreboard__big > span:first-child {
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 8vw, 5.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.scoreboard__label {
+  font-size: var(--t-small);
+  color: color-mix(in srgb, var(--ground) 62%, var(--ink));
+}
+
+.scoreboard__rows {
+  margin: 0;
+  padding-block: var(--s-4);
+  display: grid;
+  gap: var(--s-3);
+}
+
+.scoreboard__rows > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: var(--t-small);
+}
+
+.scoreboard__rows dt {
+  color: color-mix(in srgb, var(--ground) 56%, var(--ink));
+}
+
+.scoreboard__rows dd {
+  margin: 0;
+  color: var(--ground);
+}
+
+.scoreboard__note {
+  font-size: var(--t-micro);
+  color: color-mix(in srgb, var(--ground) 52%, var(--ink));
+  border-top: 1px solid color-mix(in srgb, var(--ground) 14%, var(--ink));
+  padding-top: var(--s-3);
+}
+
+/* Trace chain ---------------------------------------------------------- */
+
+.trace {
+  display: grid;
+  gap: 0;
+  counter-reset: trace;
+}
+
+.trace__step {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.25rem var(--s-4);
+  padding: var(--s-4) 0 var(--s-4) var(--s-5);
+  border-left: 2px solid var(--hairline-strong);
+  position: relative;
+}
+
+.trace__step::before {
+  content: '';
+  position: absolute;
+  left: -0.3rem;
+  top: calc(var(--s-4) + 0.45rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ground);
+  border: 2px solid var(--hairline-strong);
+}
+
+.trace__step:first-child::before,
+.trace__step:last-child::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.trace__tag {
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  align-self: baseline;
+}
+
+.trace__value {
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.trace__note {
+  grid-column: 2;
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+.trace__foot {
+  margin-top: var(--s-4);
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+/* Measured ------------------------------------------------------------- */
+
+.section--measured {
+  background: var(--ground-deep);
+  border-block: 1px solid var(--hairline);
+}
+
+.stats {
+  display: grid;
+  gap: 1px;
+  margin-top: var(--s-7);
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stat {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: var(--s-5);
+  background: var(--surface);
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.stat__label {
+  font-size: var(--t-small);
+  font-weight: 500;
+}
+
+.stat__note {
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+/* Digits must not change width while counting, or the layout jitters. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 46rem) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 72rem) {
+  .stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Ablation table ------------------------------------------------------- */
+
+.ablation {
+  margin-top: var(--s-6);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.table__caption {
+  caption-side: top;
+  text-align: left;
+  font-size: var(--t-micro);
+  color: var(--muted);
+  padding-bottom: var(--s-3);
+  max-width: 70ch;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.7rem var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--t-small);
+}
+
+.table thead th {
+  font-family: var(--font-body);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--ground-deep);
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table td {
+  text-align: right;
+}
+
+.table .is-best {
+  color: var(--accent-deep);
+  font-weight: 500;
+}
+
+.ablation__note {
+  margin-top: var(--s-3);
+  font-size: var(--t-micro);
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+/* ------------------------------------------------------------------- cta */
+
+.cta {
+  padding-block: clamp(4.5rem, 10vw, 10rem);
+  text-align: center;
+}
+
+.cta__inner {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-4);
+}
+
+.cta__title {
+  font-size: var(--t-display);
+  letter-spacing: -0.04em;
+}
+
+.cta__lede {
+  max-width: 44ch;
+}
+
+.cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+/* ---------------------------------------------------------------- footer */
+
+.foot {
+  border-top: 1px solid var(--hairline);
+  padding-block: var(--s-6);
+  background: var(--ground-deep);
+}
+
+.foot__inner {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.foot__note {
+  font-size: var(--t-micro);
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+.foot__meta {
+  display: flex;
+  gap: var(--s-4);
+}
+
+.foot__link {
+  font-size: var(--t-micro);
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--hairline-strong);
+  text-underline-offset: 3px;
+}
+
+.foot__link:hover {
+  text-decoration-color: var(--accent);
+}
+
+@media (min-width: 62rem) {
+  .foot__inner {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--s-6);
+  }
+}

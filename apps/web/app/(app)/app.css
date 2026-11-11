@@ -1,0 +1,265 @@
+/*
+ * The application surface.
+ *
+ * The same palette and type as the landing page, used very differently. Here the job is
+ * density and stillness: a reviewer scanning a list of specs wants to compare rows, and
+ * a reviewer reading a design wants a comfortable measure and nothing moving in the
+ * periphery. So the display face appears only at page titles, the scale is smaller
+ * throughout, and nothing animates on scroll.
+ */
+
+.app {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+/* --------------------------------------------------------------- top bar */
+
+.app__bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.app__barInner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  min-height: 3.5rem;
+  padding-inline: var(--gutter);
+  max-width: 96rem;
+  margin-inline: auto;
+}
+
+.app__brand {
+  font-size: 0.98rem;
+}
+
+.app__nav {
+  display: none;
+  gap: var(--s-4);
+  margin-right: auto;
+  padding-left: var(--s-4);
+  border-left: 1px solid var(--hairline);
+}
+
+.app__navLink {
+  font-size: var(--t-small);
+  color: var(--ink-soft);
+  padding: 0.3rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color var(--dur-fast) var(--ease-io);
+}
+
+.app__navLink:hover {
+  color: var(--ink);
+}
+
+.app__navLink[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.app__user {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-left: auto;
+}
+
+.app__userName {
+  display: none;
+  flex-direction: column;
+  line-height: 1.25;
+  font-size: var(--t-small);
+  font-weight: 500;
+}
+
+.app__userRole {
+  font-size: var(--t-micro);
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.app__signOut {
+  background: none;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.85rem;
+  font-size: var(--t-micro);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-io),
+    color var(--dur-fast) var(--ease-io);
+}
+
+.app__signOut:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.app__signOut:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+@media (min-width: 48rem) {
+  .app__nav,
+  .app__userName {
+    display: flex;
+  }
+}
+
+/* ----------------------------------------------------------------- body */
+
+.app__body {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: var(--s-6) var(--gutter) var(--s-9);
+}
+
+.page__head {
+  display: grid;
+  gap: var(--s-2);
+  margin-bottom: var(--s-6);
+}
+
+.page__title {
+  font-size: clamp(1.75rem, 3vw, 2.4rem);
+}
+
+.page__lede {
+  font-size: var(--t-small);
+  color: var(--muted);
+  max-width: 76ch;
+}
+
+/* ------------------------------------------------------------ spec list */
+
+.specs {
+  display: grid;
+  gap: 1px;
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.specRow {
+  display: grid;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  transition: background var(--dur-fast) var(--ease-io);
+}
+
+.specRow:hover {
+  background: var(--ground);
+}
+
+.specRow__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.specRow__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.specRow__title a::after {
+  /* Makes the whole row clickable without nesting interactive elements. */
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.specRow {
+  position: relative;
+}
+
+.specRow__desc {
+  font-size: var(--t-small);
+  color: var(--ink-soft);
+  max-width: 88ch;
+}
+
+.specRow__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+.specRow__meta code {
+  color: var(--faint);
+}
+
+/* State badge ---------------------------------------------------------- */
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--ground-deep);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Waiting on a person is the one thing a reviewer scans for, so it is the only state
+   that gets the accent. Everything else stays neutral. */
+.state--awaiting {
+  background: var(--accent-wash);
+  border-color: var(--warn-border);
+  color: var(--accent-deep);
+}
+
+.state--done {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+  color: var(--ok-ink);
+}
+
+.state--failed {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-ink);
+}
+
+/* Empty state ---------------------------------------------------------- */
+
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+  padding: var(--s-7) var(--s-5);
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.empty__title {
+  font-size: var(--t-section);
+}
+
+.empty__body {
+  font-size: var(--t-small);
+  color: var(--muted);
+  max-width: 56ch;
+}

@@ -1,0 +1,173 @@
+/*
+ * The auth surface.
+ *
+ * A two-column split on wide viewports: the form on the paper ground, the argument on
+ * the ink panel. On a phone the panel is dropped rather than stacked — a column of prose
+ * under a sign-in form is something nobody reads, and it pushes the submit button below
+ * the fold.
+ */
+
+.auth {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.auth__panel {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--s-6);
+  padding: clamp(2rem, 6vw, 4rem) var(--gutter);
+  /* Keeps the form from stretching to a silly width on a wide single column. */
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+.authCard {
+  width: 100%;
+  display: grid;
+  gap: var(--s-3);
+}
+
+.authCard__title {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+}
+
+.authCard__lede {
+  font-size: var(--t-small);
+  color: var(--muted);
+  max-width: 44ch;
+  margin-bottom: var(--s-3);
+}
+
+.authCard__alt {
+  margin-top: var(--s-4);
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+
+.authCard__alt a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--hairline-strong);
+  text-underline-offset: 3px;
+}
+
+.authCard__alt a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* Form ----------------------------------------------------------------- */
+
+.authForm {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.authForm__submit {
+  margin-top: var(--s-2);
+  justify-self: start;
+}
+
+.authForm__error {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+  font-size: var(--t-small);
+}
+
+/* A select needs the caret back, since `.input` strips nothing but looks like a text box. */
+select.input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.1rem) 1.15rem,
+    calc(100% - 0.75rem) 1.15rem;
+  background-size:
+    0.35rem 0.35rem,
+    0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
+}
+
+/* Aside ---------------------------------------------------------------- */
+
+.auth__aside {
+  display: none;
+  background: var(--ink);
+  color: var(--ground);
+  padding: clamp(2.5rem, 4vw, 4.5rem);
+  align-content: center;
+  gap: var(--s-7);
+}
+
+.auth__quote {
+  margin: 0;
+  display: grid;
+  gap: var(--s-4);
+}
+
+.auth__quote p {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  max-width: 26ch;
+}
+
+.auth__quoteFoot {
+  font-size: var(--t-small);
+  color: color-mix(in srgb, var(--ground) 62%, var(--ink));
+  max-width: 42ch;
+}
+
+.auth__facts {
+  margin: 0;
+  display: grid;
+  gap: var(--s-4);
+  padding-top: var(--s-5);
+  border-top: 1px solid color-mix(in srgb, var(--ground) 16%, var(--ink));
+}
+
+.auth__facts dt {
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.auth__facts dd {
+  margin: 0;
+  font-size: var(--t-small);
+  color: color-mix(in srgb, var(--ground) 72%, var(--ink));
+  max-width: 44ch;
+}
+
+.auth__facts code {
+  color: var(--ground);
+}
+
+@media (min-width: 64rem) {
+  .auth {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .auth__panel {
+    justify-items: start;
+    padding-inline: clamp(2rem, 5vw, 5rem);
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .auth__aside {
+    display: grid;
+  }
+}
