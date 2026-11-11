@@ -289,13 +289,50 @@
   }
 }
 
+/*
+ * Narrow screens stack rather than hide.
+ *
+ * The rail used to be `display: none` here, which left a phone with no navigation at
+ * all and no way to get it back — every thread unreachable once you were in one. A
+ * dense three-pane tool is never going to be pleasant at this width, but it has to stay
+ * usable, and stacking costs nothing and hides nothing.
+ */
 @media (max-width: 54rem) {
   .ws {
+    position: absolute;
+    inset: 0;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow-y: auto;
   }
 
   .rail {
-    display: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--ws-line);
+    /* Capped so the thread list cannot push the conversation off the screen. */
+    max-height: 45dvh;
+  }
+
+  .rail__list {
+    overflow-y: auto;
+  }
+
+  /* The document takes over from the conversation rather than sitting beside it. */
+  .stage--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pane {
+    border-left: 0;
+  }
+
+  .thead,
+  .tfoot {
+    padding-inline: 1rem;
+  }
+
+  .thread__scroll {
+    padding: 1rem;
   }
 }
 
@@ -1270,4 +1307,76 @@
   margin: 0;
   color: var(--ws-fail);
   font-size: var(--ws-t-sm);
+}
+
+/* ----------------------------------------------------------- grounding */
+
+/*
+ * Lifted out of the document prose on purpose. Rendered inside the markdown, a verified
+ * claim and a failed one are both just words in a list, and the one claim that did not
+ * hold up is the thing a reviewer most needs to not miss.
+ */
+.ground {
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ws-line-strong);
+  border-radius: var(--ws-r);
+  background: var(--ws-surface);
+}
+
+.ground__top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.ground__rate {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-ok);
+}
+
+.ground__rate.is-bad {
+  color: var(--ws-warn);
+}
+
+.ground__label {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+}
+
+.ground__fails {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.7rem 0 0;
+  padding: 0.7rem 0 0;
+  border-top: 1px solid var(--ws-line);
+  list-style: none;
+}
+
+.ground__fail {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border-left: 2px solid var(--ws-warn);
+  border-radius: 0 var(--ws-r-sm) var(--ws-r-sm) 0;
+  background: var(--ws-warn-wash);
+}
+
+.ground__ref {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-ink);
+  word-break: break-all;
+}
+
+.ground__why {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-warn);
+}
+
+.ground__claim {
+  font-size: var(--ws-t-sm);
+  color: var(--ws-ink-soft);
 }

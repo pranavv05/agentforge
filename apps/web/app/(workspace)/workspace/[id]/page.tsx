@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getDb } from '@agentforge/db';
 import {
   evidenceStats,
+  listEvidence,
   getArtifactVersion,
   getCostSummary,
   getHeadArtifact,
@@ -139,6 +140,7 @@ export default async function ThreadPage({
           atGate={paneData.atGate}
           specVersion={spec.version}
           specStatus={spec.status}
+          evidence={openKind === 'context' ? listEvidence(db, id) : []}
         />
       )}
     </main>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import type { ArtifactKind, SpecState } from '@agentforge/contract';
+import type { ArtifactKind, ContextEvidence, SpecState } from '@agentforge/contract';
 import { Markdown } from '@/components/ui/markdown';
+import { Grounding } from '@/components/workspace/grounding';
 import { DecideControls } from '@/components/workspace/decide-controls';
 
 /**
@@ -32,6 +33,7 @@ export function DocumentPane({
   atGate,
   specVersion,
   specStatus,
+  evidence,
 }: {
   specId: string;
   kind: ArtifactKind;
@@ -43,6 +45,8 @@ export function DocumentPane({
   atGate: boolean;
   specVersion: number;
   specStatus: SpecState;
+  /** Evidence rows, for the context document only. */
+  evidence: readonly ContextEvidence[];
 }) {
   const headVersion = versions[versions.length - 1]?.version ?? version;
 
@@ -77,6 +81,7 @@ export function DocumentPane({
       </div>
 
       <div className="pane__doc">
+        {kind === 'context' && <Grounding evidence={evidence} />}
         <Markdown source={contentMd} />
       </div>
 
