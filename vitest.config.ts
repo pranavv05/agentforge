@@ -1,3 +1,4 @@
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
@@ -5,6 +6,10 @@ const pkg = (name: string): string =>
   fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url));
 
 export default defineConfig({
+  // The JSX transform, so React components can be tested at all. Without it a component
+  // file fails to parse here, because the web tsconfig leaves JSX for Next to handle.
+  plugins: [react()],
+
   resolve: {
     alias: {
       '@agentforge/contract': pkg('contract'),
@@ -21,6 +26,7 @@ export default defineConfig({
       // '@agentforge/*' entries above.
       '@/app': fileURLToPath(new URL('./apps/web/app', import.meta.url)),
       '@/lib': fileURLToPath(new URL('./apps/web/lib', import.meta.url)),
+      '@/components': fileURLToPath(new URL('./apps/web/components', import.meta.url)),
     },
   },
   test: {
