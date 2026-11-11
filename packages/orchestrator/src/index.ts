@@ -103,10 +103,12 @@ export {
 export {
   blockTask,
   completeTask,
+  releaseTask,
   startTask,
   type BlockTaskInput,
   type CompleteTaskInput,
   type CompleteTaskResult,
+  type ReleaseTaskInput,
   type StartTaskInput,
 } from './task-lifecycle.ts';
 

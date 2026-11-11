@@ -1380,3 +1380,167 @@
   font-size: var(--ws-t-sm);
   color: var(--ws-ink-soft);
 }
+
+/* ------------------------------------------- implementation phase */
+
+/*
+ * Claude Code's work, in the thread. Deliberately distinct from the agent cards above:
+ * past the release gate the actor is a different system, and the conversation should
+ * read that way.
+ */
+.work {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: start;
+  padding: 0.55rem 0;
+}
+
+.work__dot {
+  inline-size: 7px;
+  block-size: 7px;
+  margin-block-start: 0.4rem;
+  border: 1.5px solid var(--ws-accent);
+  border-radius: 50%;
+}
+
+.work.is-done .work__dot {
+  border-color: var(--ws-ok);
+  background: var(--ws-ok);
+}
+
+.work__body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.work__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.work__key {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-accent);
+}
+
+.work.is-done .work__key {
+  color: var(--ws-ok);
+}
+
+.work__title {
+  font-size: var(--ws-t-sm);
+  color: var(--ws-ink);
+}
+
+.work__what {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+}
+
+.work__evidence {
+  margin: 0.25rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-left: 2px solid var(--ws-line-strong);
+  border-radius: 0 var(--ws-r-sm) var(--ws-r-sm) 0;
+  background: var(--ws-surface);
+  font-size: var(--ws-t-xs);
+  color: var(--ws-ink-soft);
+}
+
+/* ------------------------------------------------------- progress */
+
+.prog {
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ws-line-strong);
+  border-radius: var(--ws-r);
+  background: var(--ws-surface);
+}
+
+.prog__top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.prog__count {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-ink);
+}
+
+.prog__of {
+  color: var(--ws-muted);
+  font-weight: 400;
+}
+
+.prog__label {
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+}
+
+.prog__bar {
+  block-size: 3px;
+  margin-block: 0.6rem;
+  border-radius: 2px;
+  background: var(--ws-line);
+  overflow: hidden;
+}
+
+.prog__fill {
+  display: block;
+  block-size: 100%;
+  background: var(--ws-ok);
+}
+
+.prog__list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prog__task {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-top: 1px solid var(--ws-line);
+  font-size: var(--ws-t-xs);
+}
+
+.prog__key {
+  color: var(--ws-muted);
+}
+
+.prog__title {
+  color: var(--ws-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prog__state {
+  color: var(--ws-muted);
+}
+
+.prog__task.is-completed .prog__key,
+.prog__task.is-completed .prog__state {
+  color: var(--ws-ok);
+}
+
+.prog__task.is-in_progress .prog__key,
+.prog__task.is-in_progress .prog__state {
+  color: var(--ws-accent);
+}
+
+.prog__task.is-blocked .prog__state {
+  color: var(--ws-warn);
+}

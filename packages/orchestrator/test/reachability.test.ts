@@ -83,14 +83,7 @@ const DRIVERS: Readonly<Record<string, Driver>> = {
   'READY_FOR_IMPLEMENTATION>IMPLEMENTING': { by: 'mcp', where: 'start_task' },
   'IMPLEMENTING>DONE': { by: 'mcp', where: 'complete_task, last task' },
 
-  'IMPLEMENTING>READY_FOR_IMPLEMENTATION': {
-    by: 'nothing',
-    why:
-      'Pausing implementation. No tool releases a claimed task without completing or ' +
-      'blocking it, so a spec cannot currently return to READY_FOR_IMPLEMENTATION. ' +
-      'Harmless today because the MCP server is single-task, but an abandoned claim ' +
-      'leaves the spec in IMPLEMENTING with nothing in progress.',
-  },
+  'IMPLEMENTING>READY_FOR_IMPLEMENTATION': { by: 'mcp', where: 'release_task' },
 };
 
 /** `FAILED` is reachable from every non-terminal state by construction. */
@@ -115,14 +108,16 @@ describe('every legal edge names who drives it', () => {
     expect(stale, 'DRIVERS entries for edges that no longer exist').toEqual([]);
   });
 
-  it('keeps the list of undriven edges small and explained', () => {
+  it('leaves no edge undriven', () => {
     const undriven = Object.entries(DRIVERS).filter(([, driver]) => driver.by === 'nothing');
 
-    // Not zero — one genuine gap is recorded above. The assertion is that it stays
-    // deliberate: a number that creeps upwards means edges are being added faster than
-    // they are being wired, which is exactly how the implementation phase became
-    // unreachable without anyone noticing.
-    expect(undriven.length, undriven.map(([key]) => key).join(', ')).toBeLessThanOrEqual(1);
+    // Zero, now that release_task drives IMPLEMENTING -> READY_FOR_IMPLEMENTATION. This
+    // was the last gap: every edge the state machine permits, the product can take.
+    //
+    // The bound is exact rather than generous on purpose. An edge that nothing drives is
+    // how the whole implementation phase became unreachable without a single test
+    // failing, so adding one should require editing this line and saying why.
+    expect(undriven.length, undriven.map(([key]) => key).join(', ')).toBe(0);
 
     for (const [key, driver] of undriven) {
       if (driver.by !== 'nothing') continue;

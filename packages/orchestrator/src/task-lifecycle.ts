@@ -308,3 +308,92 @@ export function blockTask(db: Db, input: BlockTaskInput): TaskRowView {
     { behavior: 'immediate' },
   );
 }
+
+export interface ReleaseTaskInput {
+  readonly specId: string;
+  readonly taskKey: string;
+  readonly reason: string;
+  readonly actor: Actor;
+  readonly expectedVersion: number;
+  readonly correlationId?: string;
+}
+
+/**
+ * Gives a claimed task back without completing it.
+ *
+ * This exists because the edge it drives — `IMPLEMENTING -> READY_FOR_IMPLEMENTATION` —
+ * was legal in the transition table and reachable by nothing. A session that claimed a
+ * task and then stopped (the agent crashed, the developer changed their mind, the task
+ * turned out to belong to someone else) left the spec in `IMPLEMENTING` forever, with
+ * nothing in progress and no way back: `start_task` refuses a second claim while one is
+ * open, so the spec could not move at all.
+ *
+ * Releasing is deliberately distinct from blocking. A blocked task is a *finding* — it
+ * stays blocked, with a reason, because something really is in the way. A released task
+ * returns to `pending` and is immediately claimable again, because nothing is wrong with
+ * the task; the claim was simply abandoned.
+ *
+ * A reason is still required. An append-only audit log that recorded claims appearing
+ * and vanishing without explanation would be worse than one that never recorded them.
+ */
+export function releaseTask(db: Db, input: ReleaseTaskInput): TaskRowView {
+  if (input.reason.trim().length === 0) {
+    throw new ValidationError('a reason must be given for releasing a claimed task', {
+      spec_id: input.specId,
+      task_key: input.taskKey,
+    });
+  }
+
+  const correlationId = input.correlationId ?? newCorrelationId();
+
+  return db.transaction(
+    (tx): TaskRowView => {
+      const spec = requireSpec(tx, input.specId);
+      const all = tasksInTx(tx, input.specId);
+      const task = all.find((t) => t.task_key === input.taskKey);
+
+      if (task === undefined) {
+        throw new NotFoundError(`task ${input.taskKey} does not exist for this spec`, {
+          spec_id: input.specId,
+          task_key: input.taskKey,
+        });
+      }
+
+      if (task.status !== 'in_progress') {
+        throw new TransitionError(
+          'PRECONDITION_FAILED',
+          `task ${input.taskKey} is ${task.status}, not in progress, so there is no claim to release`,
+          { spec_id: input.specId, task_key: input.taskKey, status: task.status },
+        );
+      }
+
+      tx.update(schema.tasks)
+        .set({ status: 'pending', startedAt: null })
+        .where(and(eq(schema.tasks.specId, input.specId), eq(schema.tasks.taskKey, input.taskKey)))
+        .run();
+
+      // Only when nothing else is running. The guard is for a future multi-task server:
+      // releasing one of two open claims must not tell the spec that implementation has
+      // stopped, because it has not.
+      const stillRunning = all.some(
+        (t) => t.task_key !== input.taskKey && t.status === 'in_progress',
+      );
+
+      if (spec.status === 'IMPLEMENTING' && !stillRunning) {
+        transitionInTx(tx, {
+          specId: spec.id,
+          from: 'IMPLEMENTING',
+          to: 'READY_FOR_IMPLEMENTATION',
+          actor: ORCHESTRATOR,
+          expectedVersion: input.expectedVersion,
+          reason: `Claim on ${input.taskKey} released: ${input.reason}`,
+          payload: { task_key: input.taskKey, released_by: input.actor.id },
+          correlationId,
+        });
+      }
+
+      return { ...task, status: 'pending', started_at: null };
+    },
+    { behavior: 'immediate' },
+  );
+}

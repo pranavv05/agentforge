@@ -16,6 +16,7 @@ import {
   listArtifactVersions,
   listAuditEntries,
   listClarifications,
+  listTasks,
 } from '@agentforge/orchestrator';
 
 /**
@@ -87,8 +88,28 @@ export interface ThreadDecision {
   readonly artifactKind: ArtifactKind;
 }
 
+/**
+ * A task being claimed or finished by the implementing agent.
+ *
+ * The pipeline does not end when tasks are generated — approved tasks are handed to
+ * Claude Code, which claims and completes them over MCP. Without these items the thread
+ * simply stopped at the release and the whole implementation phase was invisible, which
+ * made a working system look like a broken one.
+ */
+export interface ThreadTask {
+  readonly type: 'task';
+  readonly at: string;
+  readonly taskKey: string;
+  readonly title: string;
+  readonly event: 'started' | 'completed';
+  /** Evidence the agent supplied on completion. Null while in progress. */
+  readonly evidence: string | null;
+  /** Acceptance criteria this task is accountable for. */
+  readonly verifies: readonly string[];
+}
+
 export type ThreadItem =
-  ThreadRequest | ThreadActivity | ThreadQuestion | ThreadArtifact | ThreadDecision;
+  ThreadRequest | ThreadActivity | ThreadQuestion | ThreadArtifact | ThreadDecision | ThreadTask;
 
 /**
  * Counts worth putting on an artifact card.
@@ -195,6 +216,34 @@ export function buildThread(db: Db, specId: string): readonly ThreadItem[] {
     }
   }
 
+  // Task lifecycle. A task can contribute two items — the claim and the completion —
+  // because they are separate moments in the conversation, often far apart.
+  for (const task of listTasks(db, specId)) {
+    if (task.started_at !== null) {
+      items.push({
+        type: 'task',
+        at: task.started_at,
+        taskKey: task.task_key,
+        title: task.title,
+        event: 'started',
+        evidence: null,
+        verifies: task.verifies,
+      });
+    }
+
+    if (task.completed_at !== null) {
+      items.push({
+        type: 'task',
+        at: task.completed_at,
+        taskKey: task.task_key,
+        title: task.title,
+        event: 'completed',
+        evidence: task.completion_evidence,
+        verifies: task.verifies,
+      });
+    }
+  }
+
   for (const approval of listApprovals(db, specId)) {
     items.push({
       type: 'decision',
@@ -216,6 +265,9 @@ export function buildThread(db: Db, specId: string): readonly ThreadItem[] {
     artifact: 2,
     activity: 3,
     decision: 4,
+    // A task claim shares its millisecond with the READY_FOR_IMPLEMENTATION ->
+    // IMPLEMENTING transition it caused, and should read after it.
+    task: 5,
   };
 
   return items.sort((a, b) => a.at.localeCompare(b.at) || rank[a.type] - rank[b.type]);

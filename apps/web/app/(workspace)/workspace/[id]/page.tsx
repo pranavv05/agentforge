@@ -4,6 +4,7 @@ import { getDb } from '@agentforge/db';
 import {
   evidenceStats,
   listEvidence,
+  listTasks,
   getArtifactVersion,
   getCostSummary,
   getHeadArtifact,
@@ -141,6 +142,7 @@ export default async function ThreadPage({
           specVersion={spec.version}
           specStatus={spec.status}
           evidence={openKind === 'context' ? listEvidence(db, id) : []}
+          tasks={openKind === 'tasks' ? listTasks(db, id) : []}
         />
       )}
     </main>

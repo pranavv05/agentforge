@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import type { ArtifactKind, ContextEvidence, SpecState } from '@agentforge/contract';
+import type { ArtifactKind, ContextEvidence, SpecState, TaskRow } from '@agentforge/contract';
 import { Markdown } from '@/components/ui/markdown';
 import { Grounding } from '@/components/workspace/grounding';
+import { TaskProgress } from '@/components/workspace/task-progress';
 import { DecideControls } from '@/components/workspace/decide-controls';
 
 /**
@@ -34,6 +35,7 @@ export function DocumentPane({
   specVersion,
   specStatus,
   evidence,
+  tasks,
 }: {
   specId: string;
   kind: ArtifactKind;
@@ -47,6 +49,8 @@ export function DocumentPane({
   specStatus: SpecState;
   /** Evidence rows, for the context document only. */
   evidence: readonly ContextEvidence[];
+  /** Live task rows, for the tasks document only. */
+  tasks: readonly TaskRow[];
 }) {
   const headVersion = versions[versions.length - 1]?.version ?? version;
 
@@ -82,6 +86,7 @@ export function DocumentPane({
 
       <div className="pane__doc">
         {kind === 'context' && <Grounding evidence={evidence} />}
+        {kind === 'tasks' && <TaskProgress tasks={tasks} />}
         <Markdown source={contentMd} />
       </div>
 

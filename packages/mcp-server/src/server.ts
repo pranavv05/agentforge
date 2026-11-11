@@ -7,6 +7,7 @@ import {
 import { type Db, getDb, parseJsonColumn } from '@agentforge/db';
 import {
   completeTask,
+  releaseTask,
   getHeadArtifact,
   getTask,
   listTasks,
@@ -227,6 +228,45 @@ export function createSddServer(options: ServerOptions = {}): McpServer {
             result.remaining > 0
               ? 'Call next_task for the next available task.'
               : 'All tasks are complete; the spec has moved to DONE.',
+        };
+      }),
+  );
+
+  server.registerTool(
+    'release_task',
+    {
+      title: 'Give back a claimed task',
+      description:
+        'Releases the task you claimed without completing it, returning it to pending so it ' +
+        'can be claimed again. Use this when you are abandoning the work — not when something ' +
+        'is blocking it, which is what block_task records. A reason is required and is written ' +
+        'to the audit trail.',
+      inputSchema: {
+        task_key: TaskIdSchema.describe('The claimed task to give back, e.g. TASK-001.'),
+        reason: z
+          .string()
+          .min(10, 'say why the claim is being given up')
+          .max(2000)
+          .describe('Why the claim is being released.'),
+      },
+    },
+    ({ task_key, reason }) =>
+      run(() => {
+        const id = specId();
+        const spec = requireSpecById(db(), id);
+
+        const task = releaseTask(db(), {
+          specId: id,
+          taskKey: task_key,
+          reason,
+          actor: AGENT,
+          expectedVersion: spec.version,
+        });
+
+        return {
+          task,
+          spec_status: requireSpecById(db(), id).status,
+          next_hint: 'The task is pending again. Call next_task when you are ready to resume.',
         };
       }),
   );

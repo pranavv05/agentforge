@@ -170,6 +170,34 @@ export function Thread({
           );
         }
 
+        if (item.type === 'task') {
+          // The implementation phase, written into the conversation. Claude Code is the
+          // agent here, working through the MCP server; these are the only items in the
+          // thread that AgentForge itself did not produce.
+          const done = item.event === 'completed';
+
+          return (
+            <li className={`work${done ? ' is-done' : ''}`} key={key}>
+              <span className="work__dot" aria-hidden="true" />
+              <div className="work__body">
+                <span className="work__head">
+                  <code className="work__key">{item.taskKey}</code>
+                  <span className="work__title">{item.title}</span>
+                </span>
+
+                <span className="work__what">
+                  {done ? 'completed' : 'claimed — implementation in progress'}
+                  {item.verifies.length > 0 && ` · verifies ${item.verifies.join(', ')}`}
+                </span>
+
+                {item.evidence !== null && item.evidence.length > 0 && (
+                  <p className="work__evidence">{item.evidence}</p>
+                )}
+              </div>
+            </li>
+          );
+        }
+
         return (
           <li className={`dec dec--${item.decision}`} key={key}>
             <span className="dec__dot" aria-hidden="true" />

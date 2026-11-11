@@ -271,7 +271,7 @@ afterEach(async () => {
 });
 
 describe('the exposed tool surface', () => {
-  it('offers exactly the five implementation tools, and nothing that can approve', async () => {
+  it('offers exactly the six implementation tools, and nothing that can approve', async () => {
     client = await connect(specAt('READY_FOR_IMPLEMENTATION'));
     const { tools } = await client.listTools();
 
@@ -280,6 +280,7 @@ describe('the exposed tool surface', () => {
       'get_acceptance_criteria',
       'get_approved_spec',
       'next_task',
+      'release_task',
       'start_task',
     ]);
 
@@ -299,7 +300,7 @@ describe('the exposed tool surface', () => {
     }
     // Every exposed tool is a read or a task-lifecycle write, nothing else.
     for (const name of names) {
-      expect(name).toMatch(/^(get_|next_|start_task$|complete_task$)/);
+      expect(name).toMatch(/^(get_|next_|start_task$|complete_task$|release_task$)/);
     }
   });
 
@@ -499,6 +500,66 @@ describe('complete_task', () => {
 
     expect(current(specId).status).toBe('DONE');
     expect(listAuditEntries(db, specId).at(-1)?.toState).toBe('DONE');
+  });
+});
+
+describe('release_task', () => {
+  it('gives a claim back and returns the spec to READY_FOR_IMPLEMENTATION', async () => {
+    // The edge that nothing used to drive. A session that claimed a task and stopped
+    // left the spec in IMPLEMENTING with nothing in progress, and start_task refuses a
+    // second claim while one is open — so the spec could not move at all.
+    const specId = specAt('READY_FOR_IMPLEMENTATION');
+    client = await connect(specId);
+
+    await call('start_task', { task_key: 'TASK-001' });
+    expect(current(specId).status).toBe('IMPLEMENTING');
+
+    const { json } = await call('release_task', {
+      task_key: 'TASK-001',
+      reason: 'Picked up by mistake; this belongs to the other workstream.',
+    });
+
+    const body = json as Record<string, unknown>;
+    expect((body['task'] as Record<string, unknown>)['status']).toBe('pending');
+    expect(body['spec_status']).toBe('READY_FOR_IMPLEMENTATION');
+    expect(current(specId).status).toBe('READY_FOR_IMPLEMENTATION');
+  });
+
+  it('lets the released task be claimed again', async () => {
+    const specId = specAt('READY_FOR_IMPLEMENTATION');
+    client = await connect(specId);
+
+    await call('start_task', { task_key: 'TASK-001' });
+    await call('release_task', { task_key: 'TASK-001', reason: 'Abandoning this attempt.' });
+
+    // The point of releasing rather than blocking: nothing is wrong with the task.
+    const { json } = await call('start_task', { task_key: 'TASK-001' });
+    expect((json as Record<string, unknown>)['task']).toMatchObject({ status: 'in_progress' });
+    expect(current(specId).status).toBe('IMPLEMENTING');
+  });
+
+  it('refuses to release a task that was never claimed', async () => {
+    client = await connect(specAt('READY_FOR_IMPLEMENTATION'));
+
+    const { isError, text } = await call('release_task', {
+      task_key: 'TASK-001',
+      reason: 'Nothing was ever claimed here.',
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain('not in progress');
+  });
+
+  it('requires a reason, so the audit trail explains the gap', async () => {
+    const specId = specAt('READY_FOR_IMPLEMENTATION');
+    client = await connect(specId);
+    await call('start_task', { task_key: 'TASK-001' });
+
+    const { isError } = await call('release_task', { task_key: 'TASK-001', reason: 'no' });
+
+    expect(isError).toBe(true);
+    // And the claim is untouched: a refused release must not half-release.
+    expect(current(specId).status).toBe('IMPLEMENTING');
   });
 });
 
