@@ -27,11 +27,8 @@ const API_DIR = fileURLToPath(new URL('../app/api', import.meta.url));
  */
 const PENDING: Readonly<Partial<Record<RouteName, string>>> = {
   scanContext: 'Context Agent (stages 0-3) is not built yet.',
-  draftRequirements: 'Requirement Agent is not wired to the Claude API yet.',
-  draftDesign: 'Design Agent is not wired to the Claude API yet.',
-  generateTasks: 'Task Agent is not wired to the Claude API yet.',
+  generateTasks: 'Task Agent is not built yet.',
   getComplianceTrace: 'The compliance pack and trace matrix are not built yet.',
-  stream: 'SSE streaming lands with the first real agent run.',
 };
 
 /** Walks the api directory and returns the route path of every `route.ts`. */

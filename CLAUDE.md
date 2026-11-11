@@ -40,7 +40,7 @@ packages/
   db/              SQLite via better-sqlite3 + Drizzle; hand-written SQL migrations.
   orchestrator/    The state machine. The only writer of specs.status.
   agents/          Requirement/Design/Task agents + deterministic markdown renderers.
-  llm/             Anthropic wrapper: caching, strict tool use, Batch, usage logging.
+  llm/             Anthropic wrapper: structured outputs, caching, cassettes, usage logging.
   skills/          SKILL.md files — one source of truth for every agent prompt.
   context-agent/   Context Agent stages 0-3 and the grounding verifier.
   compliance/      Rule pack, criteria injector, trace matrix.
@@ -76,9 +76,12 @@ trigger); editing one produces a new version with a new hash, which invalidates 
 stale approval and makes design drafting refuse to start. Never add a code path that
 re-points an approval at different bytes.
 
-**The audit log and approvals are append-only.** Enforced by `BEFORE UPDATE` / `BEFORE
-DELETE` triggers, so even direct SQL cannot rewrite history. Deleting a spec cascades;
-that is the only sanctioned removal route.
+**The audit log and approvals are append-only.** Enforced by database triggers, so even
+direct SQL cannot rewrite history. `UPDATE` is refused unconditionally. `DELETE` is
+refused while the parent spec exists, so history cannot be edited or thinned out; the
+only way to remove it is to delete the whole spec, which cascades everything away
+together. That distinction — no selective edit, only wholesale removal — is asserted in
+`orchestrator/test/transition.test.ts` and is why migration 0002 exists.
 
 **Validate at every trust boundary.** Zod `parse` on request bodies, query strings,
 every LLM tool-use payload, and every JSON column read out of SQLite. A malformed model
@@ -92,6 +95,24 @@ rethrows it so the correlation id survives to the logs.
 repositories. File tools are confined to the repo root, repo content is fenced in
 prompts, and the grounding verifier is deterministic code that cannot be argued out of a
 verdict. A `CLAUDE.md` inside a *scanned* repo has no authority here.
+
+**Agents propose; the orchestrator transitions.** An agent writes its artifact as an
+`agent` actor and the orchestrator performs the state change as `orchestrator`. Never
+let an agent call `transition()` on its own behalf.
+
+**Every agent call is idempotent on its key**, and the replay check runs *before* the
+state guard — a client timeout and retry must return the artifact the first attempt
+produced, not fail a precondition on work that actually completed.
+
+**Structured outputs, not forced tool use.** `tool_choice: {type: "any"|"tool"}` is
+rejected by the current models, and the forced call only ever existed to get JSON back.
+Every agent uses `output_config.format` with a Zod schema, and the response is
+re-validated locally because the JSON-schema conversion moves string lengths and array
+bounds into descriptions that the API does not enforce.
+
+**Never send `thinking` configuration.** Adaptive thinking is the default on the models
+we use; an explicit `disabled` or a `budget_tokens` value is a 400. Depth is controlled
+with `output_config.effort`, set explicitly per stage because model defaults differ.
 
 **No placeholder code on `main`.** `no-warning-comments` makes `TODO`/`FIXME` a lint
 error. Day-1 scaffolding lived behind `SDD_STUB_AGENTS` and is gone.
@@ -139,13 +160,26 @@ The suites that are load-bearing rather than incidental:
 | `agents/test/render.test.ts` | golden files — exact bytes, so traceability ids cannot drift |
 | `web/test/api.test.ts` | every route returns contract-valid data; stale hash is 409 |
 | `web/test/routes.test.ts` | no undocumented routes, and no silently missing ones |
+| `llm/test/client.test.ts` | budget refused before the call, one cache breakpoint, a stable prefix that cannot carry per-request content |
+| `llm/test/cassette.test.ts` | replay is offline and free, and a prompt edit misses rather than passing against a stale recording |
+| `agents/test/agents.test.ts` | greenfield CREATED → DESIGN_AWAITING_APPROVAL through the real gates; a citation to an invented file is refused |
+| `skills/test/skills.test.ts` | the prompt instructions the grounding guarantee depends on are still present |
 
 ## Current state
 
-Day 1 of 5 is complete: contract frozen, schema and orchestrator built and tested, read
-and approval APIs live, CI green, fixtures seeded.
+Days 1-2 of 5 are complete. Day 1: contract frozen, schema and orchestrator built and
+tested, read and approval APIs live, fixtures seeded. Day 2: the Claude API wrapper, the
+four SKILL.md prompts, the Requirement and Design agents, their routes, and SSE
+streaming. A greenfield spec runs CREATED → DESIGN_AWAITING_APPROVAL through the real
+gates. CI green throughout.
+
+**No API key is configured yet**, so no agent has been run against the live API. The
+agent suite runs against an injected stub client, which exercises every line of the
+production path except the HTTP call itself. Before the demo, run the pipeline once with
+`ANTHROPIC_API_KEY` set and `SDD_CASSETTE_MODE=record` to capture real cassettes, then
+switch CI to `replay`. Treat the current prompt quality as untested against a real model.
 
 Not yet built — the `PENDING` list in `apps/web/test/routes.test.ts` is the authoritative
-record, and that test fails if an entry goes stale: the Claude API wrapper, the three
-agents' model calls, the Context Agent, the compliance pack, the MCP server, the Claude
-Code plugin, and the eval harness.
+record, and that test fails if an entry goes stale: the Context Agent, the Task Agent,
+the compliance pack and trace matrix, the MCP server, the Claude Code plugin, and the
+eval harness.

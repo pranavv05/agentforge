@@ -62,9 +62,10 @@ function clearFixtures(): void {
     .all();
 
   for (const spec of existing) {
-    // audit_log and approvals are append-only by trigger, so they cannot be deleted
-    // directly; the ON DELETE CASCADE from specs is the only sanctioned route, and it
-    // fires below the trigger level.
+    // audit_log and approvals cannot be deleted row by row — their triggers refuse it
+    // while the parent spec exists. Deleting the spec is the only sanctioned route:
+    // the cascade removes the whole history together, which is a wholesale, obvious
+    // act rather than a selective edit. See migration 0002.
     db.delete(schema.specs).where(eq(schema.specs.id, spec.id)).run();
   }
 

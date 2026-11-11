@@ -16,7 +16,7 @@ import {
   SPEC_STATES,
   TASK_STATUSES,
 } from '@agentforge/contract';
-import { createDb, schema, type Db } from '../src/index.ts';
+import { createDb, loadMigrations, schema, type Db } from '../src/index.ts';
 
 /**
  * Schema-drift guard.
@@ -198,16 +198,33 @@ describe('indexes', () => {
 });
 
 describe('migration integrity', () => {
-  it('records the applied migration with its checksum', () => {
-    const rows = db.select().from(schema.schemaMigrations).all();
-    expect(rows).toHaveLength(1);
+  it('records every migration on disk, with its checksum', () => {
+    // Derived from the files rather than hard-coded, so adding a migration does not
+    // require editing this test — only a migration that fails to apply should.
+    const onDisk = loadMigrations();
+    const rows = db
+      .select()
+      .from(schema.schemaMigrations)
+      .all()
+      .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+
+    expect(rows.map((r) => r.name)).toEqual(onDisk.map((m) => m.name));
     expect(rows[0]?.name).toBe('0001_init.sql');
-    expect(rows[0]?.checksum).toMatch(/^[0-9a-f]{64}$/);
+    for (const row of rows) {
+      expect(row.checksum).toMatch(/^[0-9a-f]{64}$/);
+    }
+    // The recorded checksum must be the checksum of the file as committed, or the
+    // "an applied migration was edited" guard would never fire.
+    const byName = new Map(onDisk.map((m) => [m.name, m.checksum] as const));
+    for (const row of rows) {
+      expect(row.checksum).toBe(byName.get(row.name));
+    }
   });
 
   it('is idempotent: a second migrate applies nothing', () => {
+    const before = db.select().from(schema.schemaMigrations).all().length;
     const again = createDb(join(dir, 'drift.db'));
-    expect(again.select().from(schema.schemaMigrations).all()).toHaveLength(1);
+    expect(again.select().from(schema.schemaMigrations).all()).toHaveLength(before);
     again.$client.close();
   });
 

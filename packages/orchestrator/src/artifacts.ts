@@ -137,6 +137,34 @@ export function writeArtifact(db: Db, input: WriteArtifactInput): WriteArtifactR
   );
 }
 
+/**
+ * The artifact a previous call with this idempotency key produced, if any.
+ *
+ * Checked by an agent *before* its state guard: a call that already succeeded must be
+ * replayable even though the spec has since advanced past the drafting state. Without
+ * this, a client timeout and retry would surface as a precondition failure on work that
+ * actually completed.
+ */
+export function findArtifactByIdempotencyKey(
+  db: Db,
+  specId: string,
+  kind: ArtifactKind,
+  idempotencyKey: string,
+): ArtifactRow | undefined {
+  return db
+    .select()
+    .from(schema.artifactVersions)
+    .where(
+      and(
+        eq(schema.artifactVersions.specId, specId),
+        eq(schema.artifactVersions.kind, kind),
+        eq(schema.artifactVersions.idempotencyKey, idempotencyKey),
+      ),
+    )
+    .limit(1)
+    .all()[0];
+}
+
 /** The head version of a kind, or `undefined`. Read-only; safe outside a transaction. */
 export function getHeadArtifact(
   db: Db,

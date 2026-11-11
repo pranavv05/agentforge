@@ -112,6 +112,14 @@ export const DraftRequirementsRequestSchema = z.strictObject({
 
 export type DraftRequirementsRequest = z.infer<typeof DraftRequirementsRequestSchema>;
 
+/**
+ * Alias: every agent-invoking draft route takes the same two fields, so design and task
+ * generation reuse this shape rather than declaring near-identical copies.
+ */
+export const DraftArtifactRequestSchema = DraftRequirementsRequestSchema;
+
+export type DraftArtifactRequest = DraftRequirementsRequest;
+
 export const DraftArtifactResponseSchema = z.strictObject({
   spec: SpecSchema,
   artifact: ArtifactVersionSchema.nullable(),

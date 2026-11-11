@@ -27,6 +27,7 @@ export {
 
 export {
   ALLOWED_WRITE_STATES,
+  findArtifactByIdempotencyKey,
   getArtifactVersion,
   getHeadArtifact,
   listArtifactVersions,

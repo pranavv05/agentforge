@@ -412,6 +412,35 @@ describe('audit log', () => {
       /append-only/,
     );
   });
+
+  it('refuses to delete history selectively but allows a spec to be removed whole', () => {
+    // Migration 0002 narrowed the delete triggers so a spec can be deleted at all,
+    // without weakening the guarantee that matters. The distinction asserted here is
+    // the whole point: history for a live spec cannot be edited or thinned out, and the
+    // only way to remove it is to remove the entire spec with everything attached.
+    const spec = makeSpec(db);
+    driveTo(db, spec.id, 'REQ_AWAITING_APPROVAL');
+
+    const entries = listAuditEntries(db, spec.id);
+    expect(entries.length).toBeGreaterThan(1);
+    const middle = entries[1];
+    if (middle === undefined) throw new Error('expected several entries');
+
+    // Selective removal: refused, because the spec still exists.
+    expect(() => db.$client.prepare('DELETE FROM audit_log WHERE id = ?').run(middle.id)).toThrow(
+      /append-only/,
+    );
+    // A blanket delete scoped to one spec is the same tampering, and equally refused.
+    expect(() =>
+      db.$client.prepare('DELETE FROM audit_log WHERE spec_id = ?').run(spec.id),
+    ).toThrow(/append-only/);
+    expect(listAuditEntries(db, spec.id)).toHaveLength(entries.length);
+
+    // Deleting the spec takes its whole history with it, via the cascade.
+    db.$client.prepare('DELETE FROM specs WHERE id = ?').run(spec.id);
+    expect(listAuditEntries(db, spec.id)).toEqual([]);
+    expect(getSpec(db, spec.id)).toBeUndefined();
+  });
 });
 
 describe('unknown specs', () => {
