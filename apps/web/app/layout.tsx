@@ -16,6 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             AgentForge
           </a>
           <span className="tagline">evidence-checked specs, server-enforced gates</span>
+          <a href="/groundwork">Groundwork site</a>
         </header>
         <main>{children}</main>
       </body>
