@@ -34,13 +34,24 @@ export {
   MAX_TOKENS,
   cassetteMode,
   effortForStage,
-  hasApiKey,
   maxPromptTokens,
+  maxTokensForStage,
   maxToolCalls,
   modelForStage,
   type CassetteMode,
   type Effort,
 } from './config.ts';
+
+export {
+  PROVIDERS,
+  hasCredentials,
+  loadEnvFile,
+  resolveProvider,
+  toBatchModel,
+  toProviderModel,
+  type Provider,
+  type ProviderName,
+} from './provider.ts';
 
 export {
   assertStable,

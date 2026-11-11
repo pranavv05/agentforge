@@ -121,11 +121,29 @@ export interface RecordLlmCallInput {
   readonly latencyMs: number;
   readonly fromCassette: boolean;
   readonly correlationId: string;
+  /**
+   * The exact charge the gateway reported, when it reports one.
+   *
+   * Preferred over the computed estimate: a measured figure and a modelled one are
+   * different claims, and the report has to be able to tell them apart.
+   */
+  readonly reportedCostUsd?: number | null;
 }
 
 /** Writes one call to `llm_calls` and returns the dollars it cost. */
 export function recordLlmCall(db: Db, input: RecordLlmCallInput): number {
-  const costUsd = input.fromCassette ? 0 : computeCost(input.model, input.usage);
+  const reported = input.reportedCostUsd;
+  const costSource = input.fromCassette
+    ? 'none'
+    : reported !== undefined && reported !== null
+      ? 'reported'
+      : 'computed';
+
+  const costUsd = input.fromCassette
+    ? 0
+    : costSource === 'reported'
+      ? (reported ?? 0)
+      : computeCost(input.model, input.usage);
 
   db.insert(schema.llmCalls)
     .values({
@@ -138,6 +156,7 @@ export function recordLlmCall(db: Db, input: RecordLlmCallInput): number {
       cacheReadInputTokens: input.usage.cacheReadInputTokens,
       cacheCreationInputTokens: input.usage.cacheCreationInputTokens,
       costUsd,
+      costSource,
       latencyMs: input.latencyMs,
       fromCassette: input.fromCassette ? 1 : 0,
       correlationId: input.correlationId,

@@ -10,6 +10,10 @@ import { setAnthropicClient } from '../src/index.ts';
  * code executes for real, which is the point: a test that stubbed the agent instead
  * would prove nothing about the agent.
  *
+ * It implements `messages.stream`, because production streams every request. The
+ * returned object only needs `finalMessage()`, which is all the client consumes — a
+ * fuller fake event stream would be machinery with nothing testing it.
+ *
  * Each queued reply is returned once, in order, so a test can assert on a multi-call
  * sequence (ask questions, then propose) rather than a single response.
  */
@@ -28,6 +32,13 @@ export type StubReply =
       /** Defaults to `end_turn`. Set to exercise refusal and truncation handling. */
       readonly stopReason?: string;
       readonly stopDetails?: { category: string; explanation: string };
+      /**
+       * Replaces the serialised output with this exact text.
+       *
+       * For the case where a model returns something that is not JSON at all, which the
+       * production code must report rather than crash on.
+       */
+      readonly rawText?: string;
     }
   | {
       /**
@@ -57,7 +68,7 @@ export interface Stub {
   readonly restore: () => void;
 }
 
-interface ParseParams {
+interface StreamParams {
   model: string;
   max_tokens: number;
   system: Anthropic.TextBlockParam[];
@@ -68,8 +79,10 @@ interface ParseParams {
 /**
  * Installs the stub.
  *
- * Also sets a placeholder `ANTHROPIC_API_KEY`, because the production code refuses to
- * attempt a live call without one — the stub replaces the transport, not the guard.
+ * Also pins the credentials and the cassette mode, because the production code refuses
+ * to attempt a live call without a key and would otherwise take the cassette branch
+ * depending on the developer's environment. The stub replaces the transport, not the
+ * guards around it.
  */
 export function installStub(replies: readonly StubReply[] = []): Stub {
   const queue: StubReply[] = [...replies];
@@ -77,12 +90,16 @@ export function installStub(replies: readonly StubReply[] = []): Stub {
 
   const previousKey = process.env['ANTHROPIC_API_KEY'];
   const previousMode = process.env['SDD_CASSETTE_MODE'];
+  const previousProvider = process.env['SDD_PROVIDER'];
   process.env['ANTHROPIC_API_KEY'] = 'sk-ant-stub-for-tests';
   process.env['SDD_CASSETTE_MODE'] = 'off';
+  // Pinned so a machine holding an OpenRouter key does not change which gateway the
+  // production code thinks it is talking to, and therefore which model slug it sends.
+  process.env['SDD_PROVIDER'] = 'anthropic';
 
   const client = {
     messages: {
-      parse: (params: ParseParams) => {
+      stream: (params: StreamParams) => {
         calls.push({
           model: params.model,
           maxTokens: params.max_tokens,
@@ -93,35 +110,41 @@ export function installStub(replies: readonly StubReply[] = []): Stub {
         });
 
         const next = queue.shift();
-        if (next === undefined) {
-          return Promise.reject(
-            new Error(
-              `the stub ran out of queued replies after ${String(calls.length)} call(s); ` +
-                'queue one per expected model call',
-            ),
-          );
-        }
 
-        if ('error' in next) {
-          return Promise.reject(next.error);
-        }
+        return {
+          finalMessage: (): Promise<unknown> => {
+            if (next === undefined) {
+              return Promise.reject(
+                new Error(
+                  `the stub ran out of queued replies after ${String(calls.length)} call(s); ` +
+                    'queue one per expected model call',
+                ),
+              );
+            }
 
-        return Promise.resolve({
-          id: `msg_stub_${String(calls.length)}`,
-          type: 'message',
-          role: 'assistant',
-          model: params.model,
-          content: [],
-          parsed_output: next.output,
-          stop_reason: next.stopReason ?? 'end_turn',
-          stop_details: next.stopDetails ?? null,
-          usage: {
-            input_tokens: next.usage?.input_tokens ?? 12_000,
-            output_tokens: next.usage?.output_tokens ?? 2_400,
-            cache_read_input_tokens: next.usage?.cache_read_input_tokens ?? 9_000,
-            cache_creation_input_tokens: next.usage?.cache_creation_input_tokens ?? 3_000,
+            if ('error' in next) return Promise.reject(next.error);
+
+            // Production reads the JSON out of the text blocks, so the stub must put it
+            // there rather than hand back a pre-parsed object.
+            const text = next.rawText ?? JSON.stringify(next.output);
+
+            return Promise.resolve({
+              id: `msg_stub_${String(calls.length)}`,
+              type: 'message',
+              role: 'assistant',
+              model: params.model,
+              content: [{ type: 'text', text, citations: null }],
+              stop_reason: next.stopReason ?? 'end_turn',
+              stop_details: next.stopDetails ?? null,
+              usage: {
+                input_tokens: next.usage?.input_tokens ?? 12_000,
+                output_tokens: next.usage?.output_tokens ?? 2_400,
+                cache_read_input_tokens: next.usage?.cache_read_input_tokens ?? 9_000,
+                cache_creation_input_tokens: next.usage?.cache_creation_input_tokens ?? 3_000,
+              },
+            });
           },
-        });
+        };
       },
     },
   };
@@ -137,10 +160,16 @@ export function installStub(replies: readonly StubReply[] = []): Stub {
     },
     restore: () => {
       setAnthropicClient(null);
+      // Spelled out per variable: a dynamic delete on process.env is both a lint error
+      // and easy to get silently wrong.
       if (previousKey === undefined) delete process.env['ANTHROPIC_API_KEY'];
       else process.env['ANTHROPIC_API_KEY'] = previousKey;
+
       if (previousMode === undefined) delete process.env['SDD_CASSETTE_MODE'];
       else process.env['SDD_CASSETTE_MODE'] = previousMode;
+
+      if (previousProvider === undefined) delete process.env['SDD_PROVIDER'];
+      else process.env['SDD_PROVIDER'] = previousProvider;
     },
   };
 }

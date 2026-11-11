@@ -81,14 +81,44 @@ export function effortForStage(stage: LlmStage): Effort {
   return STAGE_EFFORT[stage];
 }
 
-/**
- * Output ceiling.
- *
- * 16K keeps non-streaming requests inside the SDK's HTTP timeout while leaving ample
- * room: the largest artifact we generate is a design document, and 16K output tokens
- * is far more than one has ever needed.
- */
+/** Default output ceiling, for stages whose output is small and bounded. */
 export const MAX_TOKENS = 16_000;
+
+/**
+ * Output ceiling per stage.
+ *
+ * Raised for design and tasks after the first live run hit the 16K ceiling mid-document.
+ * Two things make those stages hungrier than they look:
+ *
+ * - the compliance pack injects criteria, so a single feature legitimately produced 13
+ *   requirements and 21 acceptance criteria, and the design must cover every one;
+ * - **adaptive thinking tokens count towards `output_tokens`**, so a stage running at
+ *   `high` effort spends part of this budget reasoning before it writes anything.
+ *
+ * These stay within what the TypeScript SDK will do non-streaming — it scales its own
+ * timeout up for a large `max_tokens` on a non-streaming request — so no streaming path
+ * is needed to make them safe.
+ */
+const STAGE_MAX_TOKENS: Partial<Record<LlmStage, number>> = {
+  design: 48_000,
+  tasks: 32_000,
+  requirements: 32_000,
+};
+
+export function maxTokensForStage(stage: LlmStage): number {
+  const override = process.env['SDD_MAX_OUTPUT_TOKENS'];
+  if (override !== undefined) {
+    const parsed = Number(override);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new ValidationError(
+        `SDD_MAX_OUTPUT_TOKENS must be a positive integer, received "${override}"`,
+        { value: override },
+      );
+    }
+    return parsed;
+  }
+  return STAGE_MAX_TOKENS[stage] ?? MAX_TOKENS;
+}
 
 /**
  * The prompt-size ceiling for the agentic loop.
@@ -140,10 +170,4 @@ export function cassetteMode(): CassetteMode {
     );
   }
   return raw as CassetteMode;
-}
-
-/** True when a live API key is present. */
-export function hasApiKey(): boolean {
-  const key = process.env['ANTHROPIC_API_KEY'];
-  return key !== undefined && key.trim().length > 0;
 }

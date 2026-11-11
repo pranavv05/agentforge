@@ -30,7 +30,9 @@ export default defineConfig({
     // Each suite gets its own temp SQLite file; forks keep native module state clean.
     pool: 'forks',
     // Assertions are the signal in tests, not the log stream.
-    env: { LOG_LEVEL: 'silent' },
+    // LOG_LEVEL keeps the assertions as the signal; SDD_NO_ENV_FILE keeps the suite
+    // offline and free even on a machine with a working .env.
+    env: { LOG_LEVEL: 'silent', SDD_NO_ENV_FILE: '1' },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],

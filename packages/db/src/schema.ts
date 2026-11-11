@@ -261,6 +261,11 @@ export const llmCalls = sqliteTable(
     cacheReadInputTokens: integer('cache_read_input_tokens').notNull().default(0),
     cacheCreationInputTokens: integer('cache_creation_input_tokens').notNull().default(0),
     costUsd: real('cost_usd').notNull(),
+    costSource: text('cost_source', {
+      enum: ['reported', 'computed', 'none'],
+    })
+      .notNull()
+      .default('computed'),
     latencyMs: integer('latency_ms').notNull(),
     fromCassette: integer('from_cassette').notNull().default(0),
     correlationId: text('correlation_id').notNull(),

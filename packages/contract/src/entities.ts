@@ -159,6 +159,11 @@ export const LlmCallSchema = z.strictObject({
   cache_read_input_tokens: z.number().int().nonnegative(),
   cache_creation_input_tokens: z.number().int().nonnegative(),
   cost_usd: z.number().nonnegative(),
+  /**
+   * Whether `cost_usd` was measured or estimated. `reported` means the gateway
+   * returned the exact charge; `computed` means it came from the list-price table.
+   */
+  cost_source: z.enum(['reported', 'computed', 'none']),
   latency_ms: z.number().int().nonnegative(),
   /** True when served from the offline cassette rather than the live API. */
   from_cassette: z.boolean(),

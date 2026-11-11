@@ -17,14 +17,14 @@ import {
 import type { z } from 'zod';
 import { cassetteKey, readCassette, writeCassette, type Cassette } from './cassette.ts';
 import {
-  MAX_TOKENS,
   cassetteMode,
   effortForStage,
-  hasApiKey,
   maxPromptTokens,
+  maxTokensForStage,
   modelForStage,
 } from './config.ts';
 import { buildSystem, estimateTokens, systemText, type PromptSection } from './prompt.ts';
+import { hasCredentials, resolveProvider, toProviderModel } from './provider.ts';
 
 /**
  * The Claude client wrapper.
@@ -51,12 +51,24 @@ import { buildSystem, estimateTokens, systemText, type PromptSection } from './p
 
 let singleton: Anthropic | null = null;
 
-/** The shared SDK client. Constructed lazily so importing this module needs no key. */
+/**
+ * The shared SDK client, built for whichever gateway is configured.
+ *
+ * Constructed lazily so importing this module needs no key. OpenRouter speaks the
+ * Anthropic Messages format, so only the base URL and the auth header differ — the
+ * request shapes, structured outputs and cache breakpoints are identical.
+ */
 export function anthropic(): Anthropic {
-  singleton ??= new Anthropic({
-    // Two retries of our own on top of the SDK's, with the SDK handling 408/409/429/5xx.
-    maxRetries: 2,
-  });
+  if (singleton === null) {
+    const provider = resolveProvider();
+    singleton = new Anthropic({
+      ...(provider.baseURL === undefined ? {} : { baseURL: provider.baseURL }),
+      ...(provider.authToken === null ? {} : { authToken: provider.authToken }),
+      apiKey: provider.apiKey,
+      // Two retries, with the SDK handling 408/409/429/5xx.
+      maxRetries: 2,
+    });
+  }
   return singleton;
 }
 
@@ -91,6 +103,18 @@ export interface CompleteResult<T> {
   readonly model: string;
   readonly fromCassette: boolean;
   readonly latencyMs: number;
+}
+
+/**
+ * The gateway's own cost figure, when it supplies one.
+ *
+ * Not part of the Anthropic usage type, so it is read defensively rather than cast:
+ * OpenRouter adds `cost` (in USD) to the usage object, and a gateway that does not is
+ * simply absent here.
+ */
+function readReportedCost(usage: Anthropic.Usage): number | null {
+  const value = (usage as unknown as { cost?: unknown }).cost;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 /** Normalises the SDK's usage object, which leaves cache fields unset when unused. */
@@ -133,13 +157,25 @@ function toTaxonomy(error: unknown, model: string, stage: LlmStage): never {
   if (error instanceof Anthropic.APIError) {
     // `status` is loosely typed on the base class, so narrow rather than pass it through.
     const status = typeof error.status === 'number' ? error.status : null;
-    throw new UpstreamError(`the Anthropic API failed: ${error.message}`, {
-      details: { model, stage, status },
+    // The gateway's own explanation is the useful part of a 4xx, but `error` is loosely
+    // typed on the base class, so it is serialised rather than passed through as-is.
+    const body: unknown = error.error;
+    throw new UpstreamError(`the model gateway failed: ${error.message}`, {
+      details: { model, stage, status, body: body === undefined ? null : body },
       cause: error,
     });
   }
 
-  throw new UpstreamError('the Anthropic API call failed', {
+  // The catch-all still has to say what happened. Discarding the cause here cost a
+  // debugging cycle on the first live run: "the API call failed" names no failure.
+  const detail =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error);
+
+  throw new UpstreamError(`the model call failed — ${detail}`, {
     details: { model, stage },
     cause: error,
   });
@@ -155,7 +191,7 @@ function toTaxonomy(error: unknown, model: string, stage: LlmStage): never {
 export async function complete<T>(request: CompleteRequest<T>): Promise<CompleteResult<T>> {
   const model = modelForStage(request.stage);
   const effort = effortForStage(request.stage);
-  const maxTokens = request.maxTokens ?? MAX_TOKENS;
+  const maxTokens = request.maxTokens ?? maxTokensForStage(request.stage);
   const log = runLogger(request.correlationId, {
     ...(request.specId === null ? {} : { spec_id: request.specId }),
     stage: request.stage,
@@ -183,6 +219,9 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
     );
   }
 
+  const provider = resolveProvider();
+  const providerModel = toProviderModel(model, provider.name);
+
   const key = cassetteKey({
     model,
     effort,
@@ -206,10 +245,10 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
     return finishFromCassette(request, cassette, key, model, log);
   }
 
-  if (!hasApiKey()) {
+  if (!hasCredentials()) {
     throw new UpstreamError(
-      'no ANTHROPIC_API_KEY is set, so a live model call cannot be made. ' +
-        'Set SDD_CASSETTE_MODE=replay to run against recorded responses.',
+      'no ANTHROPIC_API_KEY or OPENROUTER_API_KEY is set, so a live model call cannot ' +
+        'be made. Set SDD_CASSETTE_MODE=replay to run against recorded responses.',
       { details: { stage: request.stage, model } },
     );
   }
@@ -228,12 +267,20 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
 
   const startedAt = Date.now();
 
-  // Wrapped so the SDK's own parsed-message type flows through by inference; naming it
-  // would mean importing from the SDK's internal parser module.
+  // Always streamed, for two reasons found on the first live run. The SDK refuses a
+  // non-streaming request whose `max_tokens` could exceed its ten-minute ceiling, and
+  // the design stage legitimately needs a large budget: the compliance pack injects
+  // criteria, so one feature produced 13 requirements and 21 acceptance criteria for the
+  // design to cover, and thinking tokens are charged against the same budget.
+  //
+  // Streaming also keeps this to one code path. Nothing is lost by not using
+  // `messages.parse`: its `parsed_output` is a convenience, and the response is
+  // re-validated against the Zod schema below either way, because the JSON-schema
+  // conversion drops the bounds.
   const response = await (async () => {
     try {
-      return await anthropic().messages.parse({
-        model,
+      const stream = anthropic().messages.stream({
+        model: providerModel,
         max_tokens: maxTokens,
         system,
         messages,
@@ -242,6 +289,7 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
         // `disabled` and a `budget_tokens` value are rejected by them.
         output_config: { effort, format },
       });
+      return await stream.finalMessage();
     } catch (error) {
       toTaxonomy(error, model, request.stage);
     }
@@ -265,26 +313,43 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
 
   if (response.stop_reason === 'max_tokens') {
     throw new UpstreamError(
-      `the model hit the ${String(maxTokens)}-token output ceiling before finishing, ` +
-        'so the structured output is incomplete',
+      `the model hit the ${String(maxTokens)}-token output ceiling before finishing, so ` +
+        'the structured output is incomplete. Raise the ceiling for this stage, or set ' +
+        'SDD_MAX_OUTPUT_TOKENS. Note that thinking tokens count towards this budget.',
       { details: { stage: request.stage, model, max_tokens: maxTokens } },
     );
   }
 
   const usage = readUsage(response.usage);
 
-  // `parsed_output` is null when the response could not be parsed into the schema.
-  if (response.parsed_output === null) {
-    log.error({ stop_reason: response.stop_reason }, 'structured output failed to parse');
-    throw new UpstreamError('the model returned output that did not match the requested schema', {
+  // A structured-output response carries its JSON in the text blocks.
+  const text = response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
+
+  if (text.trim().length === 0) {
+    log.error({ stop_reason: response.stop_reason }, 'model returned no text content');
+    throw new UpstreamError('the model returned no output', {
       details: { stage: request.stage, model, stop_reason: response.stop_reason },
     });
   }
 
-  // Re-validate locally. The API guarantees the *shape*; our schema also carries the
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(text);
+  } catch (cause) {
+    log.error({ stop_reason: response.stop_reason }, 'structured output was not valid JSON');
+    throw new UpstreamError(
+      'the model returned output that was not valid JSON despite a schema being requested',
+      { details: { stage: request.stage, model, stop_reason: response.stop_reason }, cause },
+    );
+  }
+
+  // Re-validate locally. The gateway guarantees the *shape*; our schema also carries the
   // bounds (string lengths, array sizes, id formats) that the JSON-schema conversion
   // moves into descriptions, so this is the check that actually enforces them.
-  const validated = request.schema.safeParse(response.parsed_output);
+  const validated = request.schema.safeParse(decoded);
   if (!validated.success) {
     log.error({ issues: validated.error.issues }, 'structured output failed local validation');
     throw new ValidationError(
@@ -292,6 +357,11 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
       { stage: request.stage, model, issues: validated.error.issues },
     );
   }
+
+  // OpenRouter returns the exact charge for the request; the first-party API does not,
+  // so there the computed estimate stands. Recording which is which keeps the report's
+  // cost claims honest.
+  const reportedCostUsd = readReportedCost(response.usage);
 
   const costUsd = recordLlmCall(request.db, {
     specId: request.specId,
@@ -301,6 +371,7 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
     latencyMs,
     fromCassette: false,
     correlationId: request.correlationId,
+    reportedCostUsd,
   });
 
   log.info(
@@ -310,6 +381,8 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
       cache_read: usage.cacheReadInputTokens,
       cache_creation: usage.cacheCreationInputTokens,
       cost_usd: costUsd,
+      cost_source: reportedCostUsd === null ? 'computed' : 'reported',
+      provider: provider.name,
       latency_ms: latencyMs,
     },
     'model call completed',

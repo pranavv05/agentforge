@@ -119,14 +119,45 @@ describe('structured output', () => {
     }
   });
 
-  it('fails when the model returns no parseable output', async () => {
-    stub.reply({ output: null });
+  it('reports output that is not JSON at all as an upstream failure', async () => {
+    // A schema was requested, so prose back is the gateway or model misbehaving rather
+    // than our input being wrong.
+    stub.reply({ output: null, rawText: 'I am afraid I cannot do that.' });
 
     try {
       await run();
       throw new Error('expected an upstream failure');
     } catch (error) {
-      expect((error as AgentForgeError).code).toBe('UPSTREAM_FAILED');
+      const e = error as AgentForgeError;
+      expect(e.code).toBe('UPSTREAM_FAILED');
+      expect(e.message).toContain('not valid JSON');
+    }
+  });
+
+  it('reports an empty response rather than treating it as an empty object', async () => {
+    stub.reply({ output: null, rawText: '   ' });
+
+    try {
+      await run();
+      throw new Error('expected an upstream failure');
+    } catch (error) {
+      const e = error as AgentForgeError;
+      expect(e.code).toBe('UPSTREAM_FAILED');
+      expect(e.message).toContain('returned no output');
+    }
+  });
+
+  it('reports valid JSON of the wrong shape as a validation failure', async () => {
+    // Distinct from the two above: the transport worked and the model answered, but the
+    // answer does not satisfy the contract. Conflating the three would make a prompt
+    // problem look like a gateway problem.
+    stub.reply({ output: null });
+
+    try {
+      await run();
+      throw new Error('expected a validation failure');
+    } catch (error) {
+      expect((error as AgentForgeError).code).toBe('VALIDATION_FAILED');
     }
   });
 
@@ -334,7 +365,10 @@ describe('failure classification', () => {
 
   it('surfaces a missing API key as a clear instruction, not a crash', async () => {
     stub.restore();
+    // Both, now that either gateway's key would satisfy the check.
+    const previousOpenRouter = process.env['OPENROUTER_API_KEY'];
     delete process.env['ANTHROPIC_API_KEY'];
+    delete process.env['OPENROUTER_API_KEY'];
     // Pinned explicitly: restore() hands the mode back to the ambient value, and this
     // assertion is about the live path. Inheriting the environment's mode made this
     // test pass locally and fail in CI, where the workflow had set it to replay.
@@ -347,10 +381,12 @@ describe('failure classification', () => {
     } catch (error) {
       const e = error as AgentForgeError;
       expect(e.code).toBe('UPSTREAM_FAILED');
+      expect(e.message).toContain('OPENROUTER_API_KEY');
       expect(e.message).toContain('SDD_CASSETTE_MODE=replay');
     } finally {
       if (previousMode === undefined) delete process.env['SDD_CASSETTE_MODE'];
       else process.env['SDD_CASSETTE_MODE'] = previousMode;
+      if (previousOpenRouter !== undefined) process.env['OPENROUTER_API_KEY'] = previousOpenRouter;
       stub = installStub();
     }
   });
