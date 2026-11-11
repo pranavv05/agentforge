@@ -24,9 +24,11 @@ jobs:
       # step uses, kept inside the workspace so nothing escapes the runner.
       SDD_DB_PATH: ./data/ci.db
       SDD_RUN_COST_CAP_USD: '2.00'
-      # No API key in CI: the agent suites run from recorded cassettes, so a green
-      # build never depends on a live model call or costs anything.
-      SDD_CASSETTE_MODE: replay
+      # No API key in CI, and no cassettes are committed yet: the agent suites inject a
+      # stub client and each test pins the cassette mode it needs. Deliberately not set
+      # here — a global value would be inherited by tests that mean to exercise the live
+      # path, which is exactly how this bit once passed locally and failed in CI. It
+      # returns as `replay` when real recordings land.
       LOG_LEVEL: silent
 
     steps:

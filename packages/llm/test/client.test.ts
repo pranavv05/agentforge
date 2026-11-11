@@ -335,6 +335,11 @@ describe('failure classification', () => {
   it('surfaces a missing API key as a clear instruction, not a crash', async () => {
     stub.restore();
     delete process.env['ANTHROPIC_API_KEY'];
+    // Pinned explicitly: restore() hands the mode back to the ambient value, and this
+    // assertion is about the live path. Inheriting the environment's mode made this
+    // test pass locally and fail in CI, where the workflow had set it to replay.
+    const previousMode = process.env['SDD_CASSETTE_MODE'];
+    process.env['SDD_CASSETTE_MODE'] = 'off';
 
     try {
       await run();
@@ -343,8 +348,10 @@ describe('failure classification', () => {
       const e = error as AgentForgeError;
       expect(e.code).toBe('UPSTREAM_FAILED');
       expect(e.message).toContain('SDD_CASSETTE_MODE=replay');
+    } finally {
+      if (previousMode === undefined) delete process.env['SDD_CASSETTE_MODE'];
+      else process.env['SDD_CASSETTE_MODE'] = previousMode;
+      stub = installStub();
     }
-
-    stub = installStub();
   });
 });
