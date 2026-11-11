@@ -204,7 +204,18 @@ export async function complete<T>(request: CompleteRequest<T>): Promise<Complete
     { role: 'user', content: request.userMessage },
   ];
 
-  const format = zodOutputFormat(request.schema);
+  // The SDK's `zodOutputFormat` returns { type, schema, parse }, and the SDK calls that
+  // `parse` itself — throwing its own AnthropicError before our code sees the response.
+  // That is the wrong shape of failure here: a bound violation would surface as an
+  // opaque upstream error instead of a ValidationError naming the offending field, and
+  // our local re-validation below would never run at all.
+  //
+  // So we keep the generated JSON schema and drop the parser. This is also what makes
+  // the local check meaningful rather than redundant: the JSON-schema conversion moves
+  // string lengths and array bounds into *descriptions*, which the API does not
+  // enforce, so the model can and does exceed them.
+  const generated = zodOutputFormat(request.schema);
+  const format = { type: generated.type, schema: generated.schema };
 
   // Pre-flight prompt-size check. Above 100K tokens Haiku prices five times higher, so
   // exceeding the ceiling is a cost cliff, not a soft limit.

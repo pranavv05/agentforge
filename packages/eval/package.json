@@ -14,6 +14,7 @@
     "@agentforge/contract": "*",
     "@agentforge/db": "*",
     "@agentforge/llm": "*",
+    "@agentforge/orchestrator": "*",
     "zod": "^4.6.7"
   }
 }
