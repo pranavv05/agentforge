@@ -36,10 +36,17 @@ npm run dev            # Next.js at http://localhost:3000
 npm run db:migrate     # apply SQL migrations (idempotent, checksum-guarded)
 npm run db:seed        # load three fixture specs at different lifecycle points
 npm run db:reset       # delete the database and re-migrate (refuses paths outside cwd)
-npm run sdd:scan -- <repo> [focus...]   # stage-0 scan + verifier demo, no API key, $0
 npm run ci             # typecheck + lint + format:check + test with coverage thresholds
 npm run test           # vitest
 npm run test:watch
+
+# No API key, $0
+npm run sdd:scan -- <repo> [focus...]         # stage-0 scan + verifier demo
+npm run eval -- <repo>... [--commits 15]      # retrieval ablation, writes results.{json,md}
+
+# Live, billable
+npm run sdd:smoke                             # greenfield CREATED -> DESIGN_AWAITING_APPROVAL
+npm run sdd:smoke:brownfield -- <repo> [req]  # Case B: scan, loop, verify, measured cost
 ```
 
 ## Layout
@@ -118,7 +125,10 @@ produced, not fail a precondition on work that actually completed.
 rejected by the current models, and the forced call only ever existed to get JSON back.
 Every agent uses `output_config.format` with a Zod schema, and the response is
 re-validated locally because the JSON-schema conversion moves string lengths and array
-bounds into descriptions that the API does not enforce.
+bounds into descriptions that the API does not enforce — a live run exceeded one on its
+first brownfield scan. The SDK's `zodOutputFormat` parser is deliberately **not** passed
+to the request: the SDK would call it and throw its own error first, which both hides the
+offending field and means our local check never runs.
 
 **Never send `thinking` configuration.** Adaptive thinking is the default on the models
 we use; an explicit `disabled` or a `budget_tokens` value is a 400. Depth is controlled
@@ -134,6 +144,9 @@ error. Day-1 scaffolding lived behind `SDD_STUB_AGENTS` and is gone.
   renders would change its own content hash and silently invalidate an approval.
 - **Migrations are hand-written SQL** in `packages/db/src/migrations`, applied in
   filename order and checksum-guarded. Never edit an applied migration; add a new one.
+  `0003` records whether a cost figure was measured or computed; `0004` makes the
+  module-summary cache repo-scoped rather than spec-scoped, so a second feature against
+  the same checkout re-uses what the first one paid for.
   `packages/db/src/schema.ts` is a Drizzle *mirror* for typed queries, kept honest by
   `packages/db/test/drift.test.ts`.
 - **Enum values are spelled once**, in `packages/contract/src/states.ts`. The SQL CHECK
@@ -141,6 +154,24 @@ error. Day-1 scaffolding lived behind `SDD_STUB_AGENTS` and is gone.
 - **Prompt prefixes are byte-stable** and ordered system prompt → compliance pack → repo
   map → module summaries → approved artifacts. No timestamps or ids in the prefix, or
   caching stops hitting.
+- **The gateway is confined to `llm/src/provider.ts`.** Either `ANTHROPIC_API_KEY` or
+  `OPENROUTER_API_KEY` works: OpenRouter serves an Anthropic-format `/v1/messages`, so
+  the same SDK, the same `output_config.format` structured outputs and the same
+  `cache_control` breakpoints apply unchanged. Its base URL stops at `/api` — the SDK
+  appends `/v1/messages` itself. Model ids stay canonical everywhere inside the system
+  and are translated at the edge, so there is one pricing table and one set of
+  `llm_calls.model` values regardless of which gateway served a run.
+- **Every request streams.** Not a preference: the SDK refuses a non-streaming request
+  whose `max_tokens` could exceed its ten-minute ceiling, and the design and task stages
+  need a large ceiling because the compliance pack injects criteria (one feature produced
+  16 requirements and 21 acceptance criteria) and **thinking tokens are charged against
+  the same output budget**. Ceilings are per stage in `llm/src/config.ts`.
+- **Cost provenance is recorded, not assumed.** A streamed response carries no gateway
+  cost figure — the SDK rebuilds usage from the stream deltas and drops OpenRouter's
+  non-standard `cost` field — so `llm_calls.cost_source` says whether a figure was
+  `reported` or `computed`. The computed figure is only trustworthy if the gateway
+  passes list pricing through, which `npm run sdd:smoke` re-checks on every run with one
+  small non-streaming call. Current result: 0.00% difference.
 - **Models are config, not literals.** `claude-haiku-5-5` for development and the
   context loop, `claude-sonnet-5-5` for demo runs. The agentic loop keeps its prompt
   under 100K tokens because Haiku prices above that threshold five times higher — a cost
@@ -170,6 +201,13 @@ offline and deterministic and a green build costs nothing.
 Coverage thresholds are enforced in `vitest.config.ts`: ≥90% statements on the
 governance- and grounding-critical packages, ≥75% overall.
 
+`testTimeout` and `hookTimeout` are raised above the vitest defaults because two suites
+drive real subprocesses — the `PreToolUse` hook and the MCP server are both exercised as
+separate processes, since a hook tested in-process would not prove the hook works — and
+one parses a whole repository with tree-sitter in its setup. The hook's own latency is
+asserted separately, so the raised timeout does not loosen the requirement that it
+answers fast.
+
 The suites that are load-bearing rather than incidental:
 
 | Suite | What it proves |
@@ -191,10 +229,16 @@ The suites that are load-bearing rather than incidental:
 | `context-agent/test/verifier.test.ts` | adversarial citations: invented files, off-by-one ranges, symlink escapes, CRLF, binaries |
 | `context-agent/test/repomap-quality.test.ts` | the ranking filters, each pinned to the real-repo failure that motivated it |
 | `context-agent/test/scan.test.ts` | path confinement, and the git and fallback inventories agreeing |
+| `context-agent/test/agent.test.ts` | Case B end to end: an invented file and an out-of-range symbol both land in the unverified-claim rate; the orchestrator, not the agent, performs the transition |
+| `context-agent/test/tools.test.ts` | adversarial tool arguments: traversal, absolute paths and symlinks out of the repo all refused, and a bad argument answered rather than thrown |
+| `llm/test/toolloop.test.ts` | every budget driven to its limit, including a parallel turn trying to exceed the tool cap |
+| `eval/test/mine.test.ts` | the leakage control: a created file really is absent from the parent worktree, a modified one really is present |
+| `eval/test/metrics.test.ts` | recall, precision and MRR against hand-computed values, and no spread claimed from one observation |
 
 ## Current state
 
-Days 1-4 of 5; CI green throughout, 720 tests.
+Days 1-5 of 5; CI green throughout, 817 tests. Every stage has now been run against a
+live model.
 
 - **Day 1** — contract frozen, schema and orchestrator built and tested, read and
   approval APIs live, fixtures seeded.
@@ -203,13 +247,51 @@ Days 1-4 of 5; CI green throughout, 720 tests.
 - **Day 3** — the 15-rule GST/TDS compliance pack with superseded-term detection and the
   trace matrix; the Task Agent; the MCP server; and the Claude Code plugin with the
   `PreToolUse` hook.
-- **Day 4 (offline half)** — Context Agent stage 0 (inventory, manifests, tree-sitter
-  repo map, FTS5 index) and stage 3, the grounding verifier. Both are deterministic and
-  need no API key. `npm run sdd:scan` runs them against any repository for nothing.
+- **Day 4** — Context Agent stage 0 (inventory, manifests, tree-sitter repo map, FTS5
+  index) and stage 3, the grounding verifier; then stages 1 and 2, the cached module
+  summaries and the budgeted agentic loop. Stages 0 and 3 are deterministic and need no
+  API key; `npm run sdd:scan` runs them against any repository for nothing.
+- **Day 5** — the eval harness: ground-truth mining from git history, the deterministic
+  retrieval ablation, and measured per-feature costs replacing the plan's estimates.
 
-**No API key is configured yet**, so no agent has been run against the live API. The
-agent suites inject a stub client, which exercises every line of the production path
-except the HTTP call itself. Treat prompt quality as untested against a real model.
+### Measured, not estimated
+
+All figures from `llm_calls` on live runs through OpenRouter on Haiku 5.5. Costs are
+computed from the list-price table, which `npm run sdd:smoke` re-verifies against the
+gateway's own reported cost on every run (currently a 0.00% difference).
+
+| Run | Result |
+|---|---|
+| Greenfield, `CREATED → DESIGN_AWAITING_APPROVAL` | 16 requirements with compliance criteria attached, 11 design sections, 4 recorded decisions, 10 risks. **$0.0186**, 2 calls. |
+| Brownfield Case B against this repository | 15 of 25 tool calls, **11.1% unverified-claim rate**, **$0.0133**, 13 calls, 34.3% cache hit rate. |
+
+The plan estimated roughly $0.60 per greenfield feature on Sonnet; the measured figure on
+Haiku is two orders of magnitude lower, which is the whole argument for the Haiku-plus-
+retrieval design rather than a larger model with a bigger prompt.
+
+### Retrieval ablation
+
+`npm run eval -- <repo>...`, 15 mined feature commits per repository, recall@10:
+
+| arm | execa (TypeScript) | requests (Python) |
+|---|---|---|
+| `grep` | 0.022 | 0.556 |
+| `repomap` | 0.117 | 0.565 |
+| `fts` | **0.344** | 0.474 |
+| `fts_repomap` | 0.233 | **0.598** |
+
+Two results worth stating plainly rather than smoothing: the lexical index is worth 15×
+grep on the TypeScript repository and *less* than grep on the Python one, and fusing the
+index with the repo map beats the index alone on one repository and loses on the other.
+The most elaborate arm is not the best arm everywhere. Spreads are wide relative to the
+means (often ±0.3 at n=15), which is the real variance of the task.
+
+Recall is scored only against files that existed in the parent commit and were modified
+by the feature. Scoring against files the feature *created* was the first version of the
+harness, and it drove all four arms below 0.05 — a retriever cannot find a file that does
+not exist yet. `packages/eval/src/mine.ts` carries the reasoning.
+
+### Known gaps and cautions
 
 **The compliance pack has not been reviewed by a tax professional.** Rates and payment
 codes are encoded only where the research document states them; everything else is a
@@ -218,17 +300,26 @@ recorded in each rule's `source_conflict_note` and asserted by tests so they can
 tidied away. Confirm every rate, threshold and code against the CBDT portal and the
 current NIC e-invoice schema before any real use.
 
-Still to build:
+**The agentic ablation has not been run.** The ablation arms compare *retrieval*
+deterministically, over 15 commits per repository, for nothing. Running the full agentic
+loop per arm per commit would measure the system as used, but costs money per run and
+varies between runs, so it would cover a handful of commits at best. The deterministic
+figures are the ones with a spread behind them, and the report should not present them as
+the other thing.
 
-- **Context Agent stages 1-2** — per-module summaries via the Batch API, and the
-  budgeted agentic loop. Both need a key. Note the constraint found while researching
-  Groq, which applies here too: structured outputs and tool use cannot be combined in a
-  single call, so the loop needs a tool-use phase followed by a separate
-  schema-constrained call.
-- **The eval harness** — ground-truth mining from git history, the retrieval ablation,
-  and replacing the plan's estimated per-feature costs with measured ones. The
-  deterministic arms (repo map vs FTS5 vs both, scored by recall@k) can run without a
-  key; the agentic arms cannot.
+**The `fts_repomap_embed` arm is named by the frozen contract but not implemented.** The
+plan listed a local-embedding arm as an optional stretch. `scanContext` refuses it rather
+than silently serving the `fts_repomap` tools under its name, which would put a row in the
+results table that was never measured.
+
+**Prompt quality is tested against a real model only for the paths the smoke scripts
+cover** — greenfield requirements and design, and a brownfield scan. The Task Agent and
+the compliance injector have been exercised offline against the stub, which runs every
+line of the production path except the HTTP call, but not yet live.
+
+**Three fixture repositories were planned; two were used** (`execa`, `requests`). The
+plan's cut order puts measurement breadth ahead of tests, CI, the verifier and the hook,
+all of which are intact.
 
 The `PENDING` list in `apps/web/test/routes.test.ts` is the authoritative record of
-unimplemented routes, and that test fails if an entry goes stale.
+unimplemented routes, and that test fails if an entry goes stale. **It is now empty.**
