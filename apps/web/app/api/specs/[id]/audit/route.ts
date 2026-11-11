@@ -11,10 +11,10 @@ import { presentAuditEntry } from '@/lib/present';
  * a millisecond and the timeline has to be exact to be evidence.
  */
 export function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  return handle(async () => {
+  return handle(request, async () => {
     const { id } = await params;
     const db = getDb();
     requireSpecById(db, id);

@@ -27,6 +27,7 @@ const {
   createSpec,
   decideArtifact,
   getHeadArtifact,
+  listAuditEntries,
   getSpec,
   askClarifications,
   recordLlmCall,
@@ -108,6 +109,16 @@ let gateSpecId: string;
 let clarifySpecId: string;
 
 const url = (path: string): string => `http://localhost:3000${path}`;
+
+/**
+ * The reviewer these tests act as.
+ *
+ * A real account with a real session cookie on every request — see `./session.ts` for
+ * why there is no bypass. The email matches ACTOR above, so assertions about audit
+ * actors line up whether a row was written through HTTP or straight through the
+ * orchestrator.
+ */
+const { req, anonReq } = await (await import('./session')).createTestSession(ACTOR.id);
 
 /** Reads a handler's JSON body, asserting the status first for clearer failures. */
 async function json(response: Response, expectedStatus: number): Promise<unknown> {
@@ -231,7 +242,7 @@ afterAll(() => {
 
 describe('GET /api/specs', () => {
   it('returns a schema-valid list', async () => {
-    const body = await json(await specsRoute.GET(new Request(url('/api/specs'))), 200);
+    const body = await json(await specsRoute.GET(req('/api/specs')), 200);
     const parsed = contract.ListSpecsResponseSchema.parse(body);
     expect(parsed.total).toBe(2);
     expect(parsed.specs).toHaveLength(2);
@@ -239,7 +250,7 @@ describe('GET /api/specs', () => {
 
   it('applies the status filter', async () => {
     const body = await json(
-      await specsRoute.GET(new Request(url('/api/specs?status=REQ_AWAITING_APPROVAL'))),
+      await specsRoute.GET(req('/api/specs?status=REQ_AWAITING_APPROVAL')),
       200,
     );
     const parsed = contract.ListSpecsResponseSchema.parse(body);
@@ -247,10 +258,7 @@ describe('GET /api/specs', () => {
   });
 
   it('rejects an unknown status with 400', async () => {
-    const body = await json(
-      await specsRoute.GET(new Request(url('/api/specs?status=NOT_A_STATE'))),
-      400,
-    );
+    const body = await json(await specsRoute.GET(req('/api/specs?status=NOT_A_STATE')), 400);
     expect(contract.ApiErrorSchema.parse(body).error.code).toBe('VALIDATION_FAILED');
   });
 });
@@ -258,7 +266,7 @@ describe('GET /api/specs', () => {
 describe('POST /api/specs', () => {
   it('creates a greenfield spec', async () => {
     const response = await specsRoute.POST(
-      new Request(url('/api/specs'), {
+      req('/api/specs', {
         method: 'POST',
         body: JSON.stringify({
           title: 'Created over HTTP',
@@ -276,7 +284,7 @@ describe('POST /api/specs', () => {
   it('rejects a greenfield spec that supplies a repo path', async () => {
     const body = await json(
       await specsRoute.POST(
-        new Request(url('/api/specs'), {
+        req('/api/specs', {
           method: 'POST',
           body: JSON.stringify({
             title: 'Contradictory',
@@ -294,7 +302,7 @@ describe('POST /api/specs', () => {
   it('rejects an unknown field rather than ignoring it', async () => {
     const body = await json(
       await specsRoute.POST(
-        new Request(url('/api/specs'), {
+        req('/api/specs', {
           method: 'POST',
           body: JSON.stringify({
             title: 'Typo',
@@ -312,7 +320,7 @@ describe('POST /api/specs', () => {
 
   it('rejects a malformed body', async () => {
     const body = await json(
-      await specsRoute.POST(new Request(url('/api/specs'), { method: 'POST', body: 'not json' })),
+      await specsRoute.POST(req('/api/specs', { method: 'POST', body: 'not json' })),
       400,
     );
     expect(contract.ApiErrorSchema.parse(body).error.message).toContain('not valid JSON');
@@ -322,7 +330,7 @@ describe('POST /api/specs', () => {
 describe('GET /api/specs/:id', () => {
   it('returns the spec with artifacts, approvals and legal transitions', async () => {
     const body = await json(
-      await specRoute.GET(new Request(url(`/api/specs/${gateSpecId}`)), {
+      await specRoute.GET(req(`/api/specs/${gateSpecId}`), {
         params: Promise.resolve({ id: gateSpecId }),
       }),
       200,
@@ -338,7 +346,7 @@ describe('GET /api/specs/:id', () => {
 
   it('returns 404 for an unknown spec', async () => {
     const body = await json(
-      await specRoute.GET(new Request(url('/api/specs/nope')), {
+      await specRoute.GET(req('/api/specs/nope'), {
         params: Promise.resolve({ id: 'nope' }),
       }),
       404,
@@ -350,7 +358,7 @@ describe('GET /api/specs/:id', () => {
 describe('GET /api/specs/:id/artifacts/:kind', () => {
   it('returns the head version and full history', async () => {
     const body = await json(
-      await artifactRoute.GET(new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements`)), {
+      await artifactRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements`), {
         params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
       }),
       200,
@@ -366,10 +374,9 @@ describe('GET /api/specs/:id/artifacts/:kind', () => {
 
   it('returns a specific version on request', async () => {
     const body = await json(
-      await artifactRoute.GET(
-        new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements?version=1`)),
-        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
-      ),
+      await artifactRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements?version=1`), {
+        params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
+      }),
       200,
     );
     expect(contract.GetArtifactResponseSchema.parse(body).artifact.version).toBe(1);
@@ -377,10 +384,9 @@ describe('GET /api/specs/:id/artifacts/:kind', () => {
 
   it('404s for a version that does not exist', async () => {
     const body = await json(
-      await artifactRoute.GET(
-        new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements?version=99`)),
-        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
-      ),
+      await artifactRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements?version=99`), {
+        params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
+      }),
       404,
     );
     expect(contract.ApiErrorSchema.parse(body).error.code).toBe('NOT_FOUND');
@@ -388,7 +394,7 @@ describe('GET /api/specs/:id/artifacts/:kind', () => {
 
   it('400s for an invalid artifact kind', async () => {
     const body = await json(
-      await artifactRoute.GET(new Request(url(`/api/specs/${gateSpecId}/artifacts/bogus`)), {
+      await artifactRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/bogus`), {
         params: Promise.resolve({ id: gateSpecId, kind: 'bogus' }),
       }),
       400,
@@ -398,7 +404,7 @@ describe('GET /api/specs/:id/artifacts/:kind', () => {
 
   it('404s for a kind with no versions yet', async () => {
     const body = await json(
-      await artifactRoute.GET(new Request(url(`/api/specs/${gateSpecId}/artifacts/design`)), {
+      await artifactRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/design`), {
         params: Promise.resolve({ id: gateSpecId, kind: 'design' }),
       }),
       404,
@@ -410,10 +416,9 @@ describe('GET /api/specs/:id/artifacts/:kind', () => {
 describe('GET /api/specs/:id/artifacts/:kind/diff', () => {
   it('diffs two versions of the rendered markdown', async () => {
     const body = await json(
-      await diffRoute.GET(
-        new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=1&to=2`)),
-        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
-      ),
+      await diffRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=1&to=2`), {
+        params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
+      }),
       200,
     );
     const parsed = contract.DiffArtifactResponseSchema.parse(body);
@@ -428,10 +433,9 @@ describe('GET /api/specs/:id/artifacts/:kind/diff', () => {
 
   it('returns no hunks when diffing a version against itself', async () => {
     const body = await json(
-      await diffRoute.GET(
-        new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=2&to=2`)),
-        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
-      ),
+      await diffRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=2&to=2`), {
+        params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
+      }),
       200,
     );
     expect(contract.DiffArtifactResponseSchema.parse(body).hunks).toEqual([]);
@@ -439,10 +443,9 @@ describe('GET /api/specs/:id/artifacts/:kind/diff', () => {
 
   it('400s when from or to is missing', async () => {
     const body = await json(
-      await diffRoute.GET(
-        new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=1`)),
-        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
-      ),
+      await diffRoute.GET(req(`/api/specs/${gateSpecId}/artifacts/requirements/diff?from=1`), {
+        params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }),
+      }),
       400,
     );
     expect(contract.ApiErrorSchema.parse(body).error.code).toBe('VALIDATION_FAILED');
@@ -452,7 +455,7 @@ describe('GET /api/specs/:id/artifacts/:kind/diff', () => {
 describe('POST /api/specs/:id/artifacts/:kind/decide', () => {
   const decide = async (body: Record<string, unknown>): Promise<Response> =>
     await decideRoute.POST(
-      new Request(url(`/api/specs/${gateSpecId}/artifacts/requirements/decide`), {
+      req(`/api/specs/${gateSpecId}/artifacts/requirements/decide`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -535,7 +538,7 @@ describe('POST /api/specs/:id/artifacts/:kind/decide', () => {
 describe('GET /api/specs/:id/audit', () => {
   it('returns the ordered, append-only timeline', async () => {
     const body = await json(
-      await auditRoute.GET(new Request(url(`/api/specs/${gateSpecId}/audit`)), {
+      await auditRoute.GET(req(`/api/specs/${gateSpecId}/audit`), {
         params: Promise.resolve({ id: gateSpecId }),
       }),
       200,
@@ -553,7 +556,7 @@ describe('GET /api/specs/:id/audit', () => {
 describe('GET /api/specs/:id/cost', () => {
   it('returns measured spend with a cache hit rate', async () => {
     const body = await json(
-      await costRoute.GET(new Request(url(`/api/specs/${gateSpecId}/cost`)), {
+      await costRoute.GET(req(`/api/specs/${gateSpecId}/cost`), {
         params: Promise.resolve({ id: gateSpecId }),
       }),
       200,
@@ -570,7 +573,7 @@ describe('GET /api/specs/:id/cost', () => {
 describe('GET /api/specs/:id/tasks', () => {
   it('returns task rows with their traceability fields', async () => {
     const body = await json(
-      await tasksRoute.GET(new Request(url(`/api/specs/${gateSpecId}/tasks`)), {
+      await tasksRoute.GET(req(`/api/specs/${gateSpecId}/tasks`), {
         params: Promise.resolve({ id: gateSpecId }),
       }),
       200,
@@ -587,7 +590,7 @@ describe('GET /api/specs/:id/tasks', () => {
 describe('GET /api/specs/:id/context', () => {
   it('returns null for a greenfield spec rather than an error', async () => {
     const body = await json(
-      await contextRoute.GET(new Request(url(`/api/specs/${gateSpecId}/context`)), {
+      await contextRoute.GET(req(`/api/specs/${gateSpecId}/context`), {
         params: Promise.resolve({ id: gateSpecId }),
       }),
       200,
@@ -599,12 +602,9 @@ describe('GET /api/specs/:id/context', () => {
 describe('clarifications', () => {
   it('lists open questions', async () => {
     const body = await json(
-      await clarificationsRoute.GET(
-        new Request(url(`/api/specs/${clarifySpecId}/clarifications`)),
-        {
-          params: Promise.resolve({ id: clarifySpecId }),
-        },
-      ),
+      await clarificationsRoute.GET(req(`/api/specs/${clarifySpecId}/clarifications`), {
+        params: Promise.resolve({ id: clarifySpecId }),
+      }),
       200,
     );
     const parsed = contract.ListClarificationsResponseSchema.parse(body);
@@ -617,10 +617,9 @@ describe('clarifications', () => {
   it('records an answer', async () => {
     const listed = contract.ListClarificationsResponseSchema.parse(
       await json(
-        await clarificationsRoute.GET(
-          new Request(url(`/api/specs/${clarifySpecId}/clarifications`)),
-          { params: Promise.resolve({ id: clarifySpecId }) },
-        ),
+        await clarificationsRoute.GET(req(`/api/specs/${clarifySpecId}/clarifications`), {
+          params: Promise.resolve({ id: clarifySpecId }),
+        }),
         200,
       ),
     );
@@ -629,7 +628,7 @@ describe('clarifications', () => {
 
     const body = await json(
       await answerRoute.POST(
-        new Request(url(`/api/specs/${clarifySpecId}/clarifications/answer`), {
+        req(`/api/specs/${clarifySpecId}/clarifications/answer`, {
           method: 'POST',
           body: JSON.stringify({
             expected_version: version(clarifySpecId),
@@ -643,13 +642,16 @@ describe('clarifications', () => {
 
     const parsed = contract.ListClarificationsResponseSchema.parse(body);
     expect(parsed.clarifications[0]?.answer).toBe('NEFT only.');
-    expect(parsed.clarifications[0]?.answered_by).toBe('reviewer@agentforge.local');
+    // The signed-in account, resolved from the session cookie — not a configured
+    // default. Before authentication was real this read back a fixed dev identity, so
+    // the assertion proved nothing about who had actually answered.
+    expect(parsed.clarifications[0]?.answered_by).toBe(ACTOR.id);
   });
 
   it('404s when answering a clarification from another spec', async () => {
     const body = await json(
       await answerRoute.POST(
-        new Request(url(`/api/specs/${gateSpecId}/clarifications/answer`), {
+        req(`/api/specs/${gateSpecId}/clarifications/answer`, {
           method: 'POST',
           body: JSON.stringify({
             expected_version: version(gateSpecId),
@@ -668,9 +670,129 @@ describe('GET /api/compliance/pack', () => {
   it('404s with a clear message until a pack is loaded', async () => {
     // Deliberate: an empty rule set would read as "nothing to comply with", which is
     // the opposite of the truth. The pack lands with the compliance package.
-    const body = await json(await packRoute.GET(), 404);
+    const body = await json(await packRoute.GET(req('/api/compliance/pack')), 404);
     expect(contract.ApiErrorSchema.parse(body).error.message).toContain(
       'no compliance pack has been loaded',
     );
+  });
+});
+
+describe('the authentication gate', () => {
+  /**
+   * The gate, driven from outside.
+   *
+   * This is what makes the audit log evidence rather than decoration. The log records
+   * the actor verbatim, so it proves exactly as much as the thing that resolved the
+   * actor — and before authentication was real, that was a request header anyone could
+   * set. These tests hold the boundary to its claim: no session, no actor, no write.
+   *
+   * `handle` authenticates before it parses anything, so a request is refused on its
+   * session rather than on its payload. An unauthenticated caller learns nothing about
+   * whether their body was well-formed, or whether a spec id exists.
+   */
+
+  it('refuses an unauthenticated read with 401', async () => {
+    const body = await json(await specsRoute.GET(anonReq('/api/specs')), 401);
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('refuses an unauthenticated read of a specific spec', async () => {
+    // Private project data, not just mutations: a spec list, an artifact and an audit
+    // trail are all things an anonymous caller should not see.
+    const body = await json(
+      await specRoute.GET(anonReq(`/api/specs/${gateSpecId}`), {
+        params: Promise.resolve({ id: gateSpecId }),
+      }),
+      401,
+    );
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('refuses an unauthenticated audit read', async () => {
+    const body = await json(
+      await auditRoute.GET(anonReq(`/api/specs/${gateSpecId}/audit`), {
+        params: Promise.resolve({ id: gateSpecId }),
+      }),
+      401,
+    );
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('refuses an unauthenticated approval and changes nothing', async () => {
+    const head = getHeadArtifact(getDb(), gateSpecId, 'requirements');
+    if (head === undefined) throw new Error('no requirements artifact');
+
+    const statusBefore = getSpec(getDb(), gateSpecId)?.status;
+    const auditBefore = listAuditEntries(getDb(), gateSpecId).length;
+
+    const body = await json(
+      await decideRoute.POST(
+        anonReq(`/api/specs/${gateSpecId}/artifacts/requirements/decide`, {
+          method: 'POST',
+          body: JSON.stringify({
+            content_hash: head.contentHash,
+            decision: 'approve',
+            comment: 'should never be recorded',
+            expected_version: version(gateSpecId),
+          }),
+        }),
+        { params: Promise.resolve({ id: gateSpecId, kind: 'requirements' }) },
+      ),
+      401,
+    );
+
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+    // The point of the test: an anonymous approval leaves no trace and moves nothing.
+    expect(getSpec(getDb(), gateSpecId)?.status).toBe(statusBefore);
+    expect(listAuditEntries(getDb(), gateSpecId)).toHaveLength(auditBefore);
+  });
+
+  it('refuses a forged session cookie', async () => {
+    // Sessions are signed, so inventing a plausible-looking token is not enough. If this
+    // ever passed, every approval in the audit log would be forgeable.
+    const forged = new Request(url('/api/specs'), {
+      headers: { cookie: 'better-auth.session_token=not-a-real-token' },
+    });
+
+    const body = await json(await specsRoute.GET(forged), 401);
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('refuses an unauthenticated request before it parses the body', async () => {
+    // Deliberately malformed JSON *and* no session. A 401 rather than a 400 proves the
+    // ordering: the gate runs first, so a prober cannot use error codes to learn whether
+    // their payload shape was right.
+    const body = await json(
+      await specsRoute.POST(anonReq('/api/specs', { method: 'POST', body: 'not json' })),
+      401,
+    );
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('records the signed-in account as the actor, not a configured default', async () => {
+    // The positive case. Taken together with the refusals above, this is what lets the
+    // audit log name a person: the identity is the session's, and there is no path that
+    // produces an actor without one.
+    const created = contract.CreateSpecResponseSchema.parse(
+      await json(
+        await specsRoute.POST(
+          req('/api/specs', {
+            method: 'POST',
+            body: JSON.stringify({
+              title: 'Actor attribution check',
+              description: 'Confirms the audit log names the signed-in account.',
+              mode: 'greenfield',
+              repo_path: null,
+            }),
+          }),
+        ),
+        201,
+      ),
+    );
+
+    const entries = listAuditEntries(getDb(), created.spec.id);
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries[0]?.actor).toBe(ACTOR.id);
+    expect(entries[0]?.actorType).toBe('human');
   });
 });

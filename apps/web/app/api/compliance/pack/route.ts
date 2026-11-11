@@ -15,8 +15,8 @@ import { handle } from '@/lib/handler';
  * loaded this returns 404 with a clear message rather than an empty pack: an empty
  * rule set would look like "nothing to comply with", which is the opposite of true.
  */
-export function GET(): Promise<Response> {
-  return handle(() => {
+export function GET(request: Request): Promise<Response> {
+  return handle(request, () => {
     const db = getDb();
 
     const rows = db

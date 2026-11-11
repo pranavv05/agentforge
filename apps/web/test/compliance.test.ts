@@ -39,6 +39,8 @@ const traceRoute = await import('@/app/api/specs/[id]/compliance/trace/route');
 const HUMAN = { id: 'reviewer@example.com', type: 'human' } as const;
 const ORCHESTRATOR = { id: 'orchestrator', type: 'orchestrator' } as const;
 
+const { req } = await (await import('./session')).createTestSession(HUMAN.id);
+
 async function json(response: Response, expectedStatus: number): Promise<unknown> {
   const body: unknown = await response.json();
   expect(response.status, JSON.stringify(body).slice(0, 400)).toBe(expectedStatus);
@@ -52,7 +54,7 @@ afterAll(() => {
 
 describe('GET /api/compliance/pack', () => {
   it('404s with a clear message before a pack is loaded', async () => {
-    const body = await json(await packRoute.GET(), 404);
+    const body = await json(await packRoute.GET(req('/api/compliance/pack')), 404);
     expect(contract.ApiErrorSchema.parse(body).error.message).toContain(
       'no compliance pack has been loaded',
     );
@@ -62,7 +64,7 @@ describe('GET /api/compliance/pack', () => {
     expect(loadPack(getDb())).toBe(15);
 
     const parsed = contract.GetCompliancePackResponseSchema.parse(
-      await json(await packRoute.GET(), 200),
+      await json(await packRoute.GET(req('/api/compliance/pack')), 200),
     );
 
     expect(parsed.pack.version).toBe(PACK_VERSION);
@@ -210,10 +212,9 @@ describe('GET /api/specs/:id/compliance/trace', () => {
   }
 
   const get = async (specId: string) =>
-    await traceRoute.GET(
-      new Request(`http://localhost:3000/api/specs/${specId}/compliance/trace`),
-      { params: Promise.resolve({ id: specId }) },
-    );
+    await traceRoute.GET(req(`/api/specs/${specId}/compliance/trace`), {
+      params: Promise.resolve({ id: specId }),
+    });
 
   it('traces an applicable rule through to a task', async () => {
     const specId = tracedSpec();

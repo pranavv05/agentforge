@@ -11,6 +11,16 @@ import { z } from 'zod';
 export const ERROR_CODES = [
   /** Input failed schema validation at a trust boundary. */
   'VALIDATION_FAILED',
+  /**
+   * No signed-in user.
+   *
+   * Added when authentication stopped being a stub. It is deliberately not folded into
+   * `VALIDATION_FAILED`: a missing session is not a malformed request, and conflating
+   * them would have a client retry with corrected input when what it needs is to sign
+   * in. There is no matching `FORBIDDEN` because authorisation is not decided here —
+   * the transition table's only identity rule is `actor.type === 'human'`.
+   */
+  'UNAUTHENTICATED',
   /** The requested state move is not in the transition table. */
   'ILLEGAL_TRANSITION',
   /** `expectedVersion` did not match: another writer got there first. */
@@ -44,6 +54,7 @@ export const ErrorCodeSchema = z.enum(ERROR_CODES);
 /** HTTP status for each code. Single source, so routes never invent their own mapping. */
 export const ERROR_STATUS: Record<ErrorCode, number> = {
   VALIDATION_FAILED: 400,
+  UNAUTHENTICATED: 401,
   ILLEGAL_TRANSITION: 409,
   VERSION_CONFLICT: 409,
   HASH_MISMATCH: 409,
@@ -131,6 +142,20 @@ export class TransitionError extends AgentForgeError {
     details?: unknown,
   ) {
     super(code, message, details === undefined ? {} : { details });
+  }
+}
+
+/**
+ * No signed-in user.
+ *
+ * Carries no details by default. An authentication failure is the one place where a
+ * helpful error message is a disclosure risk — "no such account" and "wrong password"
+ * answer different questions for someone probing a list of addresses — so the shape
+ * here keeps the response uninformative by construction.
+ */
+export class UnauthenticatedError extends AgentForgeError {
+  constructor(message = 'this request needs a signed-in user') {
+    super('UNAUTHENTICATED', message, {});
   }
 }
 

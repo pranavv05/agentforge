@@ -13,10 +13,10 @@ import { handle } from '@/lib/handler';
  * result, which is what the verified/unverified badges render from.
  */
 export function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  return handle(async () => {
+  return handle(request, async () => {
     const { id } = await params;
     const db = getDb();
     requireSpecById(db, id);

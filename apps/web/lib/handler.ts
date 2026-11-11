@@ -4,9 +4,10 @@ import {
   ValidationError,
   isAgentForgeError,
 } from '@agentforge/contract';
-import { newCorrelationId, runLogger } from '@agentforge/orchestrator';
+import { newCorrelationId, runLogger, type Actor } from '@agentforge/orchestrator';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requestActor } from './actor';
 
 /**
  * The route-handler wrapper.
@@ -22,26 +23,90 @@ import { z } from 'zod';
  *   returned as a 500 carrying that id, never as a misleading success;
  * - **a correlation id per request**, threaded into the orchestrator so the audit log
  *   and the server log can be joined after the fact.
+ *
+ * It is also where **authentication is enforced**, and it is enforced by default. A
+ * route gets a signed-in actor or it does not run. Doing this per route would mean every
+ * future route has to remember, and the one that forgets is an unauthenticated hole in a
+ * system whose entire claim is that gates hold. `handle` therefore fails closed: the
+ * only way to serve an unauthenticated request is to say so explicitly, in the call, in
+ * a way a reviewer reading the route will see.
  */
 
-export interface RequestContext {
+/**
+ * What a handler is given.
+ *
+ * Generic over the actor so the type reflects the gate. On a normal route `actor` is an
+ * `Actor`, full stop — not `Actor | null` requiring a check the wrapper has already
+ * done. Only a route that opted out of authentication sees `null`, and it sees nothing
+ * else. That means a route cannot forget to handle the unauthenticated case, because on
+ * an authenticated route there is no unauthenticated case to handle.
+ */
+export interface RequestContext<A extends Actor | null = Actor> {
   readonly correlationId: string;
   readonly log: ReturnType<typeof runLogger>;
+  /** The signed-in human, resolved from the session cookie. */
+  readonly actor: A;
 }
 
-type Handler<T> = (ctx: RequestContext) => Promise<T> | T;
+type Handler<T, A extends Actor | null = Actor> = (ctx: RequestContext<A>) => Promise<T> | T;
+
+export interface HandleOptions {
+  readonly successStatus?: number;
+  /**
+   * Serve this route without a signed-in user.
+   *
+   * Spelled out at the call site on purpose. There is nothing under `/api` that should
+   * use it today — a spec list, an artifact and an audit trail are all private project
+   * data — so it exists for a future genuinely public endpoint (a health check, say) and
+   * to make the default visible by contrast.
+   */
+  readonly allowAnonymous?: boolean;
+}
 
 /** Serialises a successful result at the given status. */
 function ok(body: unknown, status: number): NextResponse {
   return NextResponse.json(body, { status });
 }
 
-export async function handle<T>(handler: Handler<T>, successStatus = 200): Promise<NextResponse> {
+/** Authenticated: the handler is handed a real actor. */
+export async function handle<T>(
+  request: Request,
+  handler: Handler<T>,
+  options?: HandleOptions & { allowAnonymous?: false },
+): Promise<NextResponse>;
+
+/** Anonymous, by explicit opt-in: there is no actor to hand over. */
+export async function handle<T>(
+  request: Request,
+  handler: Handler<T, null>,
+  options: HandleOptions & { allowAnonymous: true },
+): Promise<NextResponse>;
+
+export async function handle<T>(
+  request: Request,
+  handler: Handler<T> | Handler<T, null>,
+  options: HandleOptions = {},
+): Promise<NextResponse> {
   const correlationId = newCorrelationId();
   const log = runLogger(correlationId);
+  const successStatus = options.successStatus ?? 200;
 
   try {
-    const body = await handler({ correlationId, log });
+    // Before anything else, including body parsing: an unauthenticated caller should
+    // learn nothing about whether their payload was well-formed.
+    //
+    // The cast reconciles the two overloads in one implementation. It is sound because
+    // the branch that produces `null` is exactly the branch the anonymous overload
+    // selects, and that pairing is the only thing the overloads promise.
+    const body =
+      options.allowAnonymous === true
+        ? await (handler as Handler<T, null>)({ correlationId, log, actor: null })
+        : await (handler as Handler<T>)({
+            correlationId,
+            log,
+            actor: await requestActor(request),
+          });
+
     return ok(body, successStatus);
   } catch (error) {
     if (isAgentForgeError(error)) {

@@ -27,6 +27,24 @@ const API_DIR = fileURLToPath(new URL('../app/api', import.meta.url));
  */
 const PENDING: Readonly<Partial<Record<RouteName, string>>> = {};
 
+/**
+ * Route prefixes owned by a library rather than by the contract.
+ *
+ * `packages/contract` describes the spec API — the surface the frontend and the
+ * examiners reason about. Better Auth's endpoints live under /api/auth and their paths,
+ * request shapes and responses are the library's contract, not ours. Mirroring them into
+ * ROUTES would make a frozen contract claim to describe something this project does not
+ * control, and it would go stale the first time the dependency is upgraded.
+ *
+ * The exemption is a prefix list rather than a blanket skip, so a stray handler written
+ * anywhere else is still caught.
+ */
+const LIBRARY_OWNED: readonly string[] = ['/api/auth/'];
+
+function isLibraryOwned(path: string): boolean {
+  return LIBRARY_OWNED.some((prefix) => path.startsWith(prefix));
+}
+
 /** Walks the api directory and returns the route path of every `route.ts`. */
 function implementedRoutes(): readonly string[] {
   const found: string[] = [];
@@ -71,8 +89,20 @@ describe('route manifest', () => {
   });
 
   it('implements no route the contract does not declare', () => {
-    const undocumented = implementedRoutes().filter((path) => !manifestPaths.has(path));
+    const undocumented = implementedRoutes()
+      .filter((path) => !manifestPaths.has(path))
+      .filter((path) => !isLibraryOwned(path));
     expect(undocumented, 'route handlers with no entry in the ROUTES manifest').toEqual([]);
+  });
+
+  it('exempts only the library-owned prefixes that actually exist', () => {
+    // Keeps the exemption list honest: if the auth routes are ever removed or moved, the
+    // stale prefix fails here instead of quietly widening what the manifest test ignores.
+    const implemented = implementedRoutes();
+    const unused = LIBRARY_OWNED.filter(
+      (prefix) => !implemented.some((path) => path.startsWith(prefix)),
+    );
+    expect(unused, 'library-owned prefixes matching no handler').toEqual([]);
   });
 
   it('implements every manifest route that is not explicitly pending', () => {

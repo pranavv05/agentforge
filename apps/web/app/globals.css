@@ -1,54 +1,144 @@
 /*
- * Base styles only.
+ * AgentForge design system.
  *
- * The UI is the juniors' track: this file deliberately stays a minimal, neutral
- * baseline (tokens, resets, a few primitives) rather than an opinionated design, so
- * their work is not fighting styles written here. It defines colours as tokens with a
- * dark-mode block, so whatever they build inherits a coherent palette.
+ * One ground, one ink, one accent. The accent does real work — it carries approval and
+ * verification state — so it is never spent on decoration. Everything else is
+ * typography, hairlines and space.
+ *
+ * Type is Clash Display for display sizes and Cabinet Grotesk for everything else, both
+ * self-hosted: a demo must not depend on a font CDN being reachable.
+ *
+ * Status colours come in triplets (ink / bg / border) rather than a single value,
+ * because a verified badge needs all three and picking them ad hoc is how a palette
+ * drifts.
  */
 
+/* ---------------------------------------------------------------- fonts */
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/clash-display-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/clash-display-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  src: url('/fonts/cabinet-grotesk-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  src: url('/fonts/cabinet-grotesk-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  src: url('/fonts/cabinet-grotesk-800.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --------------------------------------------------------------- tokens */
+
 :root {
-  color-scheme: light dark;
+  /* Ground and ink. Never pure white on pure black — the warmth is the point. */
+  --ground: #f8f7f3;
+  --ground-deep: #f1efe8;
+  --surface: #fffefb;
+  --ink: #121414;
+  --ink-soft: #3d403c;
+  --muted: #7a7a72;
+  --faint: #a8a79e;
 
-  --bg: #fbfbfa;
-  --surface: #ffffff;
-  --border: #e4e4e1;
-  --text: #1a1a18;
-  --muted: #6b6b66;
-  --accent: #2f5c48;
-  --ok: #1f7a4d;
-  --warn: #8a6100;
-  --danger: #a32b2b;
+  --hairline: #e5e2da;
+  --hairline-strong: #d6d2c7;
 
-  --radius: 6px;
-  --gutter: 16px;
+  /* The one accent. Reserved for action and live state. */
+  --accent: #fc622a;
+  --accent-deep: #e04d18;
+  --accent-wash: #fdeee7;
+
+  /* Status triplets. */
+  --ok: #1b9e52;
+  --ok-ink: #116236;
+  --ok-bg: #e7f6ec;
+  --ok-border: #c2e6ce;
+
+  --warn: #c2410c;
+  --warn-ink: #8a2c06;
+  --warn-bg: #fdeee7;
+  --warn-border: #f5cdba;
+
+  --danger: #b3261e;
+  --danger-ink: #7f1a14;
+  --danger-bg: #fbeae8;
+  --danger-border: #f0c7c3;
+
+  --info: #2f5c8a;
+  --info-ink: #1e3f5e;
+  --info-bg: #eaf1f8;
+  --info-border: #c7d9ea;
+
+  /* Type. */
+  --font-display: 'Clash Display', 'Cabinet Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Cabinet Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* A display scale that collapses sensibly on a phone. */
+  --t-hero: clamp(2.75rem, 9vw, 8.5rem);
+  --t-display: clamp(2.25rem, 6vw, 4.5rem);
+  --t-title: clamp(1.65rem, 3.2vw, 2.5rem);
+  --t-section: clamp(1.25rem, 2vw, 1.6rem);
+  --t-body: 1.0625rem;
+  --t-small: 0.9rem;
+  --t-micro: 0.78rem;
+
+  /* Space, on a 4px base. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4.5rem;
+  --s-9: 7rem;
+  --s-10: 10rem;
+
+  --gutter: 1.5rem;
+  --measure: 68ch;
+  --shell: 76rem;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+
+  /* Motion. Two easings only: one for entrances, one for interface response. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 620ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #15161a;
-    --surface: #1d1f24;
-    --border: #2f3238;
-    --text: #e9e9e6;
-    --muted: #9a9a95;
-    --accent: #7cc0a3;
-    --ok: #63c58d;
-    --warn: #d9a637;
-    --danger: #e26d6d;
-  }
-}
-
-:root[data-theme='dark'] {
-  --bg: #15161a;
-  --surface: #1d1f24;
-  --border: #2f3238;
-  --text: #e9e9e6;
-  --muted: #9a9a95;
-  --accent: #7cc0a3;
-  --ok: #63c58d;
-  --warn: #d9a637;
-  --danger: #e26d6d;
-}
+/* ---------------------------------------------------------------- reset */
 
 *,
 *::before,
@@ -56,91 +146,368 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  line-height: 1.5;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-main {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 24px var(--gutter) 64px;
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  /* Display type needs negative tracking to stop looking loose at large sizes. */
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+  margin: 0;
+  text-wrap: balance;
 }
 
-.masthead {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  align-items: baseline;
-  padding: 14px var(--gutter);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+p {
+  margin: 0;
+  text-wrap: pretty;
 }
 
-.brand {
-  font-weight: 650;
-  color: var(--text);
-  text-decoration: none;
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
-.tagline {
-  color: var(--muted);
-  font-size: 0.85rem;
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
 
 a {
-  color: var(--accent);
+  color: inherit;
+  text-decoration: none;
 }
 
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-variant-ligatures: none;
+}
+
+/* --------------------------------------------------- focus and motion */
+
+/*
+ * Focus is visible and it is the accent. Required by the frontend definition of done,
+ * and the first thing that gets dropped when a design is chasing looks.
+ */
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin: 0 0 12px;
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
-.pill {
-  display: inline-block;
-  padding: 1px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.75rem;
+/*
+ * Honoured globally, not per component. Scroll-driven reveals set their own final state
+ * through this too — see `lib/motion.ts`, which checks the same preference before it
+ * registers anything, so a reduced-motion visitor gets a static page rather than a
+ * jumpy one.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+/* ----------------------------------------------------------- primitives */
+
+.shell {
+  width: 100%;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* A small uppercase label, used to number and name sections. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
-  white-space: nowrap;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 1.75rem;
+  height: 1px;
+  background: var(--hairline-strong);
+}
+
+.lede {
+  font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
 }
 
 .muted {
   color: var(--muted);
 }
 
-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85em;
+/* Buttons --------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0.8rem 1.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: var(--t-small);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-io),
+    border-color var(--dur-fast) var(--ease-io),
+    color var(--dur-fast) var(--ease-io),
+    transform var(--dur-fast) var(--ease-io);
 }
 
-table {
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.btn--primary:hover {
+  background: var(--accent);
+}
+
+.btn--accent {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn--accent:hover {
+  background: var(--accent-deep);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+
+.btn--ghost:hover {
+  border-color: var(--ink);
+}
+
+.btn[disabled],
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Cards and hairline surfaces ------------------------------------------ */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+
+.panel--pad {
+  padding: var(--s-5);
+}
+
+/* Badges --------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.18rem 0.6rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--ground-deep);
+  color: var(--ink-soft);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.badge--plain::before {
+  display: none;
+}
+
+.badge--ok {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+  color: var(--ok-ink);
+}
+
+.badge--warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn-ink);
+}
+
+.badge--danger {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-ink);
+}
+
+.badge--info {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-ink);
+}
+
+.badge--accent {
+  background: var(--accent-wash);
+  border-color: var(--warn-border);
+  color: var(--accent-deep);
+}
+
+/* Forms ---------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.field > label {
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.field__hint {
+  font-size: var(--t-micro);
+  color: var(--muted);
+}
+
+.input {
   width: 100%;
-  border-collapse: collapse;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--t-body);
+  transition:
+    border-color var(--dur-fast) var(--ease-io),
+    box-shadow var(--dur-fast) var(--ease-io);
 }
 
-th,
-td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* Utility -------------------------------------------------------------- */
+
+.hairline {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link — keyboard users land on it first. */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--ink);
+  color: var(--ground);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-size: var(--t-small);
+  transform: translateY(-110%);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }

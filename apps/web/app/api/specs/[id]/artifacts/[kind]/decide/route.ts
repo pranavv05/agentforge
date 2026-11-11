@@ -7,7 +7,6 @@ import {
 } from '@agentforge/contract';
 import { getDb } from '@agentforge/db';
 import { decideArtifact, listApprovals } from '@agentforge/orchestrator';
-import { requestActor } from '@/lib/actor';
 import { handle, parseBody } from '@/lib/handler';
 import { presentApproval, presentSpec } from '@/lib/present';
 
@@ -25,7 +24,7 @@ export function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; kind: string }> },
 ): Promise<Response> {
-  return handle(async ({ correlationId }) => {
+  return handle(request, async ({ correlationId, actor }) => {
     const { id, kind } = await params;
     if (!isArtifactKind(kind)) {
       throw new ValidationError(`"${kind}" is not an artifact kind`, { kind });
@@ -40,7 +39,7 @@ export function POST(
       contentHash: body.content_hash,
       decision: body.decision,
       comment: body.comment,
-      actor: requestActor(request),
+      actor,
       expectedVersion: body.expected_version,
       correlationId,
     });

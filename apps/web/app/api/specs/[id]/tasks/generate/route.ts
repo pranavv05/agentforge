@@ -21,7 +21,7 @@ export function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  return handle(async ({ correlationId }) => {
+  return handle(request, async ({ correlationId }) => {
     const { id } = await params;
     const body = await parseBody(request, DraftArtifactRequestSchema);
     const db = getDb();

@@ -88,7 +88,13 @@ const DESIGN_OUTPUT = {
 
 let stub: Stub;
 
-const url = (p: string): string => `http://localhost:3000${p}`;
+/**
+ * A real signed-in reviewer — see ./session.ts for why there is no bypass.
+ *
+ * Drafting is a mutating route, so it is refused outright without a session; these
+ * tests would all 401 otherwise.
+ */
+const { req } = await (await import('./session')).createTestSession(HUMAN.id);
 
 async function json(response: Response, expectedStatus: number): Promise<unknown> {
   const body: unknown = await response.json();
@@ -123,7 +129,7 @@ function newDraftingSpec(title = 'GST invoice export'): string {
 
 const draftRequirements = async (specId: string, body: Record<string, unknown>) =>
   await requirementsDraft.POST(
-    new Request(url(`/api/specs/${specId}/requirements/draft`), {
+    req(`/api/specs/${specId}/requirements/draft`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -132,7 +138,7 @@ const draftRequirements = async (specId: string, body: Record<string, unknown>) 
 
 const draftDesign = async (specId: string, body: Record<string, unknown>) =>
   await designDraft.POST(
-    new Request(url(`/api/specs/${specId}/design/draft`), {
+    req(`/api/specs/${specId}/design/draft`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -389,7 +395,7 @@ describe('GET /api/specs/:id/stream', () => {
     const streamRoute = await import('@/app/api/specs/[id]/stream/route');
     const controller = new AbortController();
     const response = streamRoute.GET(
-      new Request(url(`/api/specs/${specId}/stream`), { signal: controller.signal }),
+      req(`/api/specs/${specId}/stream`, { signal: controller.signal }),
       { params: Promise.resolve({ id: specId }) },
     );
 

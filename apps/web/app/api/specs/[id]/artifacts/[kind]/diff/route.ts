@@ -21,7 +21,7 @@ export function GET(
   request: Request,
   { params }: { params: Promise<{ id: string; kind: string }> },
 ): Promise<Response> {
-  return handle(async () => {
+  return handle(request, async () => {
     const { id, kind } = await params;
     if (!isArtifactKind(kind)) {
       throw new ValidationError(`"${kind}" is not an artifact kind`, { kind });

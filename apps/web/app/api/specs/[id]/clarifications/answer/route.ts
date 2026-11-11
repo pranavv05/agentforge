@@ -8,7 +8,6 @@ import {
   listClarifications,
   requireSpecById,
 } from '@agentforge/orchestrator';
-import { requestActor } from '@/lib/actor';
 import { handle, parseBody } from '@/lib/handler';
 
 /**
@@ -22,7 +21,7 @@ export function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  return handle(async () => {
+  return handle(request, async ({ actor }) => {
     const { id } = await params;
     const body = await parseBody(request, AnswerClarificationsRequestSchema);
     const db = getDb();
@@ -32,7 +31,7 @@ export function POST(
       db,
       id,
       body.answers.map((a) => ({ clarificationId: a.clarification_id, answer: a.answer })),
-      requestActor(request),
+      actor,
     );
 
     return ListClarificationsResponseSchema.parse({
