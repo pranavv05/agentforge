@@ -39,6 +39,17 @@ export type StubReply =
        * production code must report rather than crash on.
        */
       readonly rawText?: string;
+      /**
+       * Tool calls this turn asks for, making the reply a tool-use turn.
+       *
+       * The loop ends a turn with no tool calls, so a sequence of replies with
+       * `toolUses` followed by one without drives a complete exploration. `output` is
+       * ignored on a tool-use turn, since the loop reads text and tool calls rather
+       * than structured output.
+       */
+      readonly toolUses?: readonly { name: string; input: unknown }[];
+      /** Assistant text accompanying a tool-use turn, which the loop keeps as a summary. */
+      readonly text?: string;
     }
   | {
       /**
@@ -57,6 +68,8 @@ export interface CapturedCall {
   readonly effort: string | undefined;
   /** The JSON schema the request asked the model to satisfy. */
   readonly schema: unknown;
+  /** Tool names offered on this call, so a test can assert on the retrieval arm. */
+  readonly toolNames: readonly string[];
 }
 
 export interface Stub {
@@ -73,6 +86,7 @@ interface StreamParams {
   max_tokens: number;
   system: Anthropic.TextBlockParam[];
   messages: Anthropic.MessageParam[];
+  tools?: Anthropic.ToolUnion[];
   output_config?: { effort?: string; format?: { schema?: unknown } };
 }
 
@@ -107,6 +121,11 @@ export function installStub(replies: readonly StubReply[] = []): Stub {
           messages: params.messages,
           effort: params.output_config?.effort,
           schema: params.output_config?.format?.schema,
+          // ToolUnion covers server-side toolsets that have no `name`, so this narrows
+          // rather than asserting. Our own tools always have one.
+          toolNames: (params.tools ?? []).flatMap((tool) =>
+            'name' in tool && typeof tool.name === 'string' ? [tool.name] : [],
+          ),
         });
 
         const next = queue.shift();
@@ -124,17 +143,41 @@ export function installStub(replies: readonly StubReply[] = []): Stub {
 
             if ('error' in next) return Promise.reject(next.error);
 
-            // Production reads the JSON out of the text blocks, so the stub must put it
-            // there rather than hand back a pre-parsed object.
-            const text = next.rawText ?? JSON.stringify(next.output);
+            // A tool-use turn carries tool_use blocks instead of structured output; the
+            // loop reads those and the accompanying text, never `parsed_output`.
+            const content =
+              next.toolUses === undefined
+                ? [
+                    // Production reads the JSON out of the text blocks, so the stub must
+                    // put it there rather than hand back a pre-parsed object.
+                    {
+                      type: 'text',
+                      // `text` wins when set, so a loop's closing turn can be plain
+                      // prose; otherwise the structured output is serialised.
+                      text: next.rawText ?? next.text ?? JSON.stringify(next.output),
+                      citations: null,
+                    },
+                  ]
+                : [
+                    ...(next.text === undefined
+                      ? []
+                      : [{ type: 'text', text: next.text, citations: null }]),
+                    ...next.toolUses.map((use, i) => ({
+                      type: 'tool_use',
+                      id: `toolu_stub_${String(calls.length)}_${String(i)}`,
+                      name: use.name,
+                      input: use.input,
+                    })),
+                  ];
 
             return Promise.resolve({
               id: `msg_stub_${String(calls.length)}`,
               type: 'message',
               role: 'assistant',
               model: params.model,
-              content: [{ type: 'text', text, citations: null }],
-              stop_reason: next.stopReason ?? 'end_turn',
+              content,
+              stop_reason:
+                next.stopReason ?? (next.toolUses === undefined ? 'end_turn' : 'tool_use'),
               stop_details: next.stopDetails ?? null,
               usage: {
                 input_tokens: next.usage?.input_tokens ?? 12_000,

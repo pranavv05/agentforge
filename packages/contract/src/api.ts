@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { ARTIFACT_KINDS, APPROVAL_DECISIONS, SPEC_MODES, SPEC_STATES } from './states.ts';
+import {
+  ARTIFACT_KINDS,
+  APPROVAL_DECISIONS,
+  RETRIEVAL_STRATEGY_NAMES,
+  SPEC_MODES,
+  SPEC_STATES,
+} from './states.ts';
 import {
   ApprovalSchema,
   ArtifactVersionSchema,
@@ -81,7 +87,7 @@ export const GetSpecResponseSchema = z.strictObject({
 export const ScanContextRequestSchema = z.strictObject({
   expected_version: z.number().int().nonnegative(),
   /** Which retrieval strategy to run. Named so the eval harness can drive ablations. */
-  strategy: z.enum(['grep', 'repomap', 'fts_repomap', 'fts_repomap_embed']),
+  strategy: z.enum(RETRIEVAL_STRATEGY_NAMES),
   /** Overrides the env default. Still clamped to the hard ceiling server-side. */
   max_tool_calls: z.number().int().min(1).max(100).nullable(),
 });

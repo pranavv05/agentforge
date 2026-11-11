@@ -60,3 +60,11 @@ export {
   systemText,
   type PromptSection,
 } from './prompt.ts';
+
+export {
+  runToolLoop,
+  type LoopTool,
+  type ToolInvocation,
+  type ToolLoopRequest,
+  type ToolLoopResult,
+} from './toolloop.ts';

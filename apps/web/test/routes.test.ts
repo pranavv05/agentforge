@@ -25,9 +25,7 @@ const API_DIR = fileURLToPath(new URL('../app/api', import.meta.url));
  * Each is listed with the reason, and each must be deleted from this list as it lands.
  * An empty list is the goal state.
  */
-const PENDING: Readonly<Partial<Record<RouteName, string>>> = {
-  scanContext: 'Context Agent (stages 0-3) is not built yet.',
-};
+const PENDING: Readonly<Partial<Record<RouteName, string>>> = {};
 
 /** Walks the api directory and returns the route path of every `route.ts`. */
 function implementedRoutes(): readonly string[] {

@@ -63,3 +63,23 @@ export {
   type VerificationResult,
   type VerifiedClaim,
 } from './verifier.ts';
+
+export {
+  RETRIEVAL_STRATEGIES,
+  renderContext,
+  scanContext,
+  type RetrievalStrategy,
+  type ScanContextInput,
+  type ScanContextResult,
+} from './agent.ts';
+
+export { CONTEXT_TOOLS, executeContextTool, type ToolContext } from './tools.ts';
+
+export {
+  groupIntoModules,
+  moduleHash,
+  renderModuleSummaries,
+  summariseModules,
+  type ModuleSummary,
+  type SummariseModulesResult,
+} from './modules.ts';

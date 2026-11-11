@@ -29,6 +29,16 @@ export default defineConfig({
     include: ['packages/*/test/**/*.test.ts', 'apps/web/test/**/*.test.ts'],
     // Each suite gets its own temp SQLite file; forks keep native module state clean.
     pool: 'forks',
+    // The default 5s is too tight for the suites that spawn real subprocesses — the
+    // PreToolUse hook and the MCP server are both driven as separate processes on
+    // purpose, since a hook tested in-process would not prove the hook works. Under a
+    // loaded runner those spawns intermittently crossed 5s, which is a flake rather
+    // than a finding. The hook's own latency is asserted separately, so raising this
+    // does not loosen the requirement that it answers fast.
+    testTimeout: 30_000,
+    // Some suites legitimately do heavy one-off setup — parsing a repository with
+    // tree-sitter, applying migrations — which the 10s default does not cover.
+    hookTimeout: 60_000,
     // Assertions are the signal in tests, not the log stream.
     // LOG_LEVEL keeps the assertions as the signal; SDD_NO_ENV_FILE keeps the suite
     // offline and free even on a machine with a working .env.

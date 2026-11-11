@@ -286,6 +286,8 @@ export const repoModules = sqliteTable(
       .references(() => specs.id, { onDelete: 'cascade' }),
     modulePath: text('module_path').notNull(),
     gitHash: text('git_hash').notNull(),
+    /** The checkout these summaries describe, so the cache is shared across specs. */
+    repoPath: text('repo_path').notNull().default(''),
     summaryMd: text('summary_md').notNull(),
     owners: text('owners')
       .notNull()

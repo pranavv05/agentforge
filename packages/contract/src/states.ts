@@ -163,3 +163,24 @@ export const APPROVAL_STATE_FOR_ARTIFACT = {
   design: 'DESIGN_AWAITING_APPROVAL',
   tasks: null,
 } as const satisfies Record<ArtifactKind, SpecState | null>;
+
+/**
+ * The retrieval strategies the Context Agent can run.
+ *
+ * Spelled once here and derived everywhere else — the HTTP request schema, the agent's
+ * tool selection and the eval harness's arms all read from this list, so the arms the
+ * API accepts cannot drift from the arms the code implements.
+ *
+ * `fts_repomap_embed` is the optional fourth ablation the plan described. It is named
+ * because the contract is frozen and removing it would be a breaking change; it is not
+ * implemented, and the agent refuses it rather than quietly serving a different arm
+ * under its name.
+ */
+export const RETRIEVAL_STRATEGY_NAMES = [
+  'grep',
+  'repomap',
+  'fts_repomap',
+  'fts_repomap_embed',
+] as const;
+
+export type RetrievalStrategyName = (typeof RETRIEVAL_STRATEGY_NAMES)[number];

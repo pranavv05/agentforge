@@ -506,3 +506,32 @@ describe('every spec state is accounted for', () => {
     ).toEqual(['READY_FOR_IMPLEMENTATION', 'IMPLEMENTING']);
   });
 });
+
+describe('the hook answers quickly', () => {
+  /**
+   * The gate's own design note says a stalled hook is not a gate: Claude Code runs this
+   * before every Edit, so latency here is latency on every edit a developer makes. The
+   * hook is written to be dependency-free and to do one indexed read for that reason,
+   * and this is the test that holds it to it.
+   *
+   * The bound is generous because most of the measured time is Node's own startup, which
+   * the real hook also pays — the point is to catch a regression that makes it *stall*
+   * (a network call, a migration, a full table scan), not to pin a millisecond figure
+   * that would turn into a flake on a loaded CI runner.
+   */
+  it('decides in well under a second of its own work', () => {
+    const specId = specAt('REQ_DRAFTING');
+    pinSpec(specId);
+
+    // One warm-up, so the measured run is not paying for first-touch disk I/O on the
+    // database file and the Node binary.
+    runHook(editPayload(dir));
+
+    const startedAt = Date.now();
+    const outcome = runHook(editPayload(dir));
+    const elapsed = Date.now() - startedAt;
+
+    expect(outcome.decision).toBe('deny');
+    expect(elapsed, `hook took ${String(elapsed)}ms`).toBeLessThan(3_000);
+  });
+});
