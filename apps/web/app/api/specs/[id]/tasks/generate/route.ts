@@ -7,7 +7,6 @@ import { getDb } from '@agentforge/db';
 import { generateTasks } from '@agentforge/agents';
 import { requireSpecById } from '@agentforge/orchestrator';
 import { handle, parseBody } from '@/lib/handler';
-import { advanceTo } from '@/lib/advance';
 import { presentArtifact, presentSpec } from '@/lib/present';
 
 /**
@@ -35,10 +34,13 @@ export function POST(
         { spec_id: id, actual_version: spec.version, expected_version: body.expected_version },
       );
     }
-
-    // Move into the working state first, as the orchestrator. Without this nothing
-    // over HTTP could start the stage — see lib/advance.ts.
-    advanceTo(db, spec, 'TASKS_GENERATED', correlationId);
+    // Deliberately no `advanceTo` here. TASKS_GENERATED is a *result* state, not a
+    // working one: the Task Agent runs from DESIGN_APPROVED and performs the transition
+    // itself once it has written the artifact, and the edge carries a
+    // `tasks_artifact_exists` guard precisely so nothing can claim the state without
+    // producing the tasks. Advancing first made that guard refuse with a 409 reading
+    // "no tasks artifact exists for this spec yet" — the guard working as designed,
+    // against a caller that should not have been there.
 
     const result = await generateTasks(db, {
       specId: id,

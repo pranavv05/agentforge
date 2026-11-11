@@ -47,7 +47,14 @@ export function evidenceSection(evidence: readonly ContextEvidence[]): PromptSec
   }
 
   const lines = verified.map((item) => {
-    const symbol = item.symbol === null ? '(region)' : `\`${item.symbol}\``;
+    // `null`, not a human-readable placeholder.
+    //
+    // This rendered `(region)` until a live run failed on it. The instruction below says
+    // to copy the symbol exactly as given, so the model did — it emitted the string
+    // "(region)" into a field the schema types as `string | null`, and the citation
+    // checker then rejected the model for returning exactly what we had handed it.
+    // Whatever appears here is what comes back, so it has to be the value we want.
+    const symbol = item.symbol === null ? 'null' : `\`${item.symbol}\``;
     return [
       `### ${item.id}`,
       `- file: \`${item.file}\``,
@@ -66,6 +73,9 @@ export function evidenceSection(evidence: readonly ContextEvidence[]): PromptSec
       '',
       'These are the only citations you may use. Copy the file, line range, symbol and',
       'id exactly as given. Every citation is checked against the repository.',
+      '',
+      'A symbol of `null` means the evidence covers a region rather than a named',
+      'definition. Cite it as null — not as text, and not as a guess at a nearby name.',
       '',
       ...lines,
     ].join('\n'),

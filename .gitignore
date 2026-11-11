@@ -22,6 +22,12 @@ data/
 # tracking it means every build produces a diff and every commit carries noise.
 *.tsbuildinfo
 
+# Recorded model responses, captured when SDD_CASSETTE_MODE=record. They are run
+# artifacts keyed by a hash of the prompt, so they churn whenever a prompt changes and
+# are regenerated on demand. The test suites use an injected stub rather than these,
+# so a green build never depends on one being present.
+packages/llm/cassettes/
+
 # os / editor
 .DS_Store
 Thumbs.db

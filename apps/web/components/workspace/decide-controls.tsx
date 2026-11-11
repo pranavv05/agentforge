@@ -135,7 +135,7 @@ export function DecideControls({
           void submit();
         }}
       >
-        {pending ? 'Recording…' : `${selected?.label ?? 'Submit'} v — bind to this hash`}
+        {pending ? 'Recording…' : `${selected?.label ?? 'Submit'} — bind to this hash`}
       </button>
     </section>
   );

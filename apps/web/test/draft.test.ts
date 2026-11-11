@@ -33,6 +33,7 @@ const { installStub } = await import('../../../packages/llm/test/stub.ts');
 
 const requirementsDraft = await import('@/app/api/specs/[id]/requirements/draft/route');
 const designDraft = await import('@/app/api/specs/[id]/design/draft/route');
+const tasksGenerate = await import('@/app/api/specs/[id]/tasks/generate/route');
 
 type Stub = ReturnType<typeof installStub>;
 
@@ -93,6 +94,23 @@ const DESIGN_OUTPUT = {
   risks: [],
 };
 
+const TASKS_OUTPUT = {
+  implementation_order_rationale: 'Serialiser first; validation depends on it.',
+  tasks: [
+    {
+      id: 'TASK-001',
+      title: 'Map the invoice onto the GST schema',
+      description: 'Build the serialiser that produces the payload.',
+      status: 'pending',
+      requirement_ids: ['REQ-001'],
+      design_section_ids: ['DES-001'],
+      source_refs: [],
+      verifies: ['AC-001'],
+      depends_on: [],
+    },
+  ],
+};
+
 let stub: Stub;
 
 /**
@@ -137,6 +155,15 @@ function newDraftingSpec(title = 'GST invoice export'): string {
 const draftRequirements = async (specId: string, body: Record<string, unknown>) =>
   await requirementsDraft.POST(
     req(`/api/specs/${specId}/requirements/draft`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ id: specId }) },
+  );
+
+const generateTasks = async (specId: string, body: Record<string, unknown>) =>
+  await tasksGenerate.POST(
+    req(`/api/specs/${specId}/tasks/generate`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -490,5 +517,119 @@ describe('GET /api/specs/:id/stream', () => {
     expect(parsed[0]).toEqual({ type: 'state', state: 'REQ_AWAITING_APPROVAL' });
     expect(parsed.some((e) => e.type === 'cost')).toBe(true);
     expect(parsed.at(-1)?.type).toBe('done');
+  });
+});
+
+/** Drives a spec to DESIGN_AWAITING_APPROVAL — one gate short of tasks. */
+async function specInDesignAwaitingApproval(title: string): Promise<string> {
+  const specId = newDraftingSpec(title);
+
+  stub.reply({ output: REQUIREMENTS_OUTPUT });
+  await draftRequirements(specId, {
+    expected_version: version(specId),
+    idempotency_key: `${title}-req`,
+  });
+
+  const requirements = getHeadArtifact(getDb(), specId, 'requirements');
+  if (requirements === undefined) throw new Error('expected requirements');
+  decideArtifact(getDb(), {
+    specId,
+    kind: 'requirements',
+    contentHash: requirements.contentHash,
+    decision: 'approve',
+    actor: HUMAN,
+    expectedVersion: version(specId),
+  });
+
+  stub.reply({ output: DESIGN_OUTPUT });
+  await draftDesign(specId, {
+    expected_version: version(specId),
+    idempotency_key: `${title}-design`,
+  });
+
+  return specId;
+}
+
+describe('POST /api/specs/:id/tasks/generate', () => {
+  /** Drives a spec all the way to DESIGN_APPROVED through the real gates. */
+  async function specWithApprovedDesign(title: string): Promise<string> {
+    const specId = newDraftingSpec(title);
+
+    stub.reply({ output: REQUIREMENTS_OUTPUT });
+    await draftRequirements(specId, {
+      expected_version: version(specId),
+      idempotency_key: `${title}-req`,
+    });
+
+    const requirements = getHeadArtifact(getDb(), specId, 'requirements');
+    if (requirements === undefined) throw new Error('expected requirements');
+    decideArtifact(getDb(), {
+      specId,
+      kind: 'requirements',
+      contentHash: requirements.contentHash,
+      decision: 'approve',
+      actor: HUMAN,
+      expectedVersion: version(specId),
+    });
+
+    stub.reply({ output: DESIGN_OUTPUT });
+    await draftDesign(specId, {
+      expected_version: version(specId),
+      idempotency_key: `${title}-design`,
+    });
+
+    const design = getHeadArtifact(getDb(), specId, 'design');
+    if (design === undefined) throw new Error('expected design');
+    decideArtifact(getDb(), {
+      specId,
+      kind: 'design',
+      contentHash: design.contentHash,
+      decision: 'approve',
+      actor: HUMAN,
+      expectedVersion: version(specId),
+    });
+
+    return specId;
+  }
+
+  it('generates tasks from an approved design and reaches TASKS_GENERATED', async () => {
+    // This route had no coverage at all, which is how it shipped broken: it advanced the
+    // spec to TASKS_GENERATED *before* running the agent, and the `tasks_artifact_exists`
+    // guard on that edge refused with a 409 reading "no tasks artifact exists for this
+    // spec yet". TASKS_GENERATED is a result state — the Task Agent runs from
+    // DESIGN_APPROVED and performs the transition itself once it has written.
+    const specId = await specWithApprovedDesign('Tasks happy path');
+    expect(getSpec(getDb(), specId)?.status).toBe('DESIGN_APPROVED');
+
+    stub.reply({ output: TASKS_OUTPUT });
+
+    const parsed = contract.DraftArtifactResponseSchema.parse(
+      await json(
+        await generateTasks(specId, {
+          expected_version: version(specId),
+          idempotency_key: 'tasks-happy-1',
+        }),
+        200,
+      ),
+    );
+
+    expect(parsed.spec.status).toBe('TASKS_GENERATED');
+    expect(parsed.artifact?.kind).toBe('tasks');
+    expect(parsed.artifact?.content_md).toContain('TASK-001');
+  });
+
+  it('refuses before the design is approved', async () => {
+    const specId = await specInDesignAwaitingApproval('Tasks too early');
+
+    const body = await json(
+      await generateTasks(specId, {
+        expected_version: version(specId),
+        idempotency_key: 'tasks-too-early',
+      }),
+      409,
+    );
+
+    expect(contract.ApiErrorSchema.parse(body).error.code).toBe('PRECONDITION_FAILED');
+    expect(getSpec(getDb(), specId)?.status).toBe('DESIGN_AWAITING_APPROVAL');
   });
 });

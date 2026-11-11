@@ -22,13 +22,28 @@ import { nextStates, transition, type SpecRow } from '@agentforge/orchestrator';
  * as a side effect of pressing a draft button.
  */
 
+/**
+ * The only states this may ever advance *into*.
+ *
+ * A working state means "an agent is about to run here". A result state means "an agent
+ * finished and moved the spec itself" — TASKS_GENERATED is the latter, and its incoming
+ * edge carries a `tasks_artifact_exists` guard so the state cannot be claimed without
+ * the artifact. Advancing into it before the Task Agent ran produced a 409 from that
+ * guard, which is the state machine behaving correctly against a route that should not
+ * have been asking.
+ *
+ * Narrowing the type is what stops that recurring: a result state is no longer
+ * expressible as a target.
+ */
+type WorkingState = Extract<SpecState, 'CONTEXT_SCANNING' | 'REQ_DRAFTING' | 'DESIGN_DRAFTING'>;
+
 /** States from which advancing into a working state is an obvious continuation. */
-const AUTO_ADVANCE_FROM: Readonly<Record<SpecState, readonly SpecState[]>> = {
+const AUTO_ADVANCE_FROM: Readonly<Record<SpecState, readonly WorkingState[]>> = {
   CREATED: ['CONTEXT_SCANNING', 'REQ_DRAFTING'],
   CONTEXT_READY: ['CONTEXT_SCANNING', 'REQ_DRAFTING'],
   REQ_AWAITING_CLARIFICATION: ['REQ_DRAFTING'],
   REQ_APPROVED: ['DESIGN_DRAFTING'],
-  DESIGN_APPROVED: ['TASKS_GENERATED'],
+  DESIGN_APPROVED: [],
 
   // Everything else advances only through a human decision or an agent completing.
   CONTEXT_SCANNING: [],
@@ -60,7 +75,7 @@ export interface AdvanceResult {
 export function advanceTo(
   db: Db,
   spec: SpecRow,
-  target: SpecState,
+  target: WorkingState,
   correlationId: string,
 ): AdvanceResult {
   if (spec.status === target) return { spec, moved: false };

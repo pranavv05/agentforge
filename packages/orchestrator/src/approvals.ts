@@ -51,6 +51,10 @@ function targetState(kind: ArtifactKind, decision: ApprovalDecision): SpecState 
     const approved: Partial<Record<ArtifactKind, SpecState>> = {
       requirements: 'REQ_APPROVED',
       design: 'DESIGN_APPROVED',
+      // Approving the tasks releases the spec for implementation. This is the gate after
+      // which the PreToolUse hook permits file edits, so it binds to the content hash
+      // and names the human like any other approval.
+      tasks: 'READY_FOR_IMPLEMENTATION',
     };
     const state = approved[kind];
     if (state === undefined) {

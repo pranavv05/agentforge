@@ -12,3 +12,8 @@ fixtures/repos
 # undo any reformatting — so formatting it is a fight with no end. It stays tracked
 # because the typecheck needs it to exist before the build runs.
 apps/web/next-env.d.ts
+
+# Recorded model responses. Machine-written JSON whose byte layout is the recorder's
+# business, not a style matter — and reformatting one would change nothing a human
+# reads while making every recording show up as a diff.
+packages/llm/cassettes/

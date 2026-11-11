@@ -194,9 +194,19 @@ const EDGES: readonly TransitionRule[] = [
   {
     from: 'TASKS_GENERATED',
     to: 'READY_FOR_IMPLEMENTATION',
-    allowedActors: HUMAN_OR_AUTOMATED,
+    // Human only. This is the edge past which the PreToolUse hook permits file edits, so
+    // it is an approval in substance and is gated like one — no agent can release its
+    // own task list for implementation.
+    allowedActors: HUMAN_ONLY,
     guards: ['tasks_artifact_exists', 'design_approved_and_unchanged'],
     description: 'Release the spec for implementation. File edits become permitted here.',
+  },
+  {
+    from: 'TASKS_GENERATED',
+    to: 'DESIGN_APPROVED',
+    allowedActors: HUMAN_ONLY,
+    guards: ['design_approved_and_unchanged'],
+    description: 'Tasks rejected or sent back; the Task Agent can run again.',
   },
   {
     from: 'READY_FOR_IMPLEMENTATION',
