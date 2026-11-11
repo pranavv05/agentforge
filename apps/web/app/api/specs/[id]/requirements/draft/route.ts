@@ -7,6 +7,7 @@ import { getDb } from '@agentforge/db';
 import { draftRequirements } from '@agentforge/agents';
 import { listOpenClarifications, requireSpecById } from '@agentforge/orchestrator';
 import { handle, parseBody } from '@/lib/handler';
+import { advanceTo } from '@/lib/advance';
 import { presentArtifact, presentSpec } from '@/lib/present';
 
 /**
@@ -35,6 +36,10 @@ export function POST(
         { spec_id: id, actual_version: spec.version, expected_version: body.expected_version },
       );
     }
+
+    // Move into the working state first, as the orchestrator. Without this nothing
+    // over HTTP could start the stage — see lib/advance.ts.
+    advanceTo(db, spec, 'REQ_DRAFTING', correlationId);
 
     const result = await draftRequirements(db, {
       specId: id,

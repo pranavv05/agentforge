@@ -6,6 +6,7 @@ import {
 import { getDb } from '@agentforge/db';
 import { requireSpecById } from '@agentforge/orchestrator';
 import { handle, parseBody } from '@/lib/handler';
+import { advanceTo } from '@/lib/advance';
 import { presentSpec } from '@/lib/present';
 
 /**
@@ -47,6 +48,10 @@ export function POST(
         { spec_id: id, actual_version: spec.version, expected_version: body.expected_version },
       );
     }
+
+    // Move into the working state first, as the orchestrator. Without this nothing
+    // over HTTP could start the stage — see lib/advance.ts.
+    advanceTo(db, spec, 'CONTEXT_SCANNING', correlationId);
 
     const { scanContext } = await import('@agentforge/context-agent');
 

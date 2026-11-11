@@ -5,37 +5,39 @@ import { useRouter } from 'next/navigation';
 import { AgentForgeError, createClient } from '@agentforge/contract';
 
 /**
- * Answering a clarification round.
+ * Answering a clarification, in the thread.
  *
- * All questions in a round are submitted together, because that is how the orchestrator
+ * This is the one part of the pipeline that genuinely is a conversation — the agent asks,
+ * a human answers, it redrafts — so it belongs in the thread rather than on a page of its
+ * own.
+ *
+ * All open questions in a round submit together, because that is how the orchestrator
  * accepts them: a partial round would leave the agent redrafting against half an answer
- * set. The submit button stays disabled until every question has something in it, so the
- * incomplete case is prevented rather than rejected.
+ * set. The control therefore belongs to the round, not to each question, and it stays
+ * disabled until every question has something in it.
  *
- * Suggested options are buttons that fill the box, not radios that replace it. The agent
- * proposes options; the reviewer is free to write something else, and frequently should.
+ * Suggested options fill the box rather than replacing it. The agent proposes them; the
+ * reviewer should stay free to write something else, and often should.
  */
 
 const client = createClient();
 
-export interface Question {
+export interface OpenQuestion {
   readonly id: string;
   readonly question: string;
-  readonly whyItMatters: string;
   readonly options: readonly string[];
 }
 
-export function AnswerForm({
+export function AnswerInline({
   specId,
-  expectedVersion,
+  specVersion,
   questions,
 }: {
   specId: string;
-  expectedVersion: number;
-  questions: readonly Question[];
+  specVersion: number;
+  questions: readonly OpenQuestion[];
 }) {
   const router = useRouter();
-
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -43,6 +45,8 @@ export function AnswerForm({
   const complete = questions.every((q) => (answers[q.id] ?? '').trim().length > 0);
 
   async function submit(): Promise<void> {
+    if (!complete || pending) return;
+
     setError(null);
     setPending(true);
 
@@ -52,11 +56,10 @@ export function AnswerForm({
           clarification_id: q.id,
           answer: (answers[q.id] ?? '').trim(),
         })),
-        expected_version: expectedVersion,
+        expected_version: specVersion,
       });
 
       router.refresh();
-      router.push(`/specs/${specId}`);
     } catch (caught) {
       setError(
         caught instanceof AgentForgeError
@@ -71,7 +74,7 @@ export function AnswerForm({
 
   return (
     <form
-      className="answerForm"
+      className="ans"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -79,17 +82,16 @@ export function AnswerForm({
       }}
     >
       {questions.map((q) => (
-        <div className="qa qa--open" key={q.id}>
-          <label className="qa__question" htmlFor={`answer-${q.id}`}>
+        <div className="ans__item" key={q.id}>
+          <label className="ans__q" htmlFor={`ans-${q.id}`}>
             {q.question}
           </label>
-          <p className="qa__why">{q.whyItMatters}</p>
 
           {q.options.length > 0 && (
-            <div className="qa__options">
+            <div className="ans__opts">
               {q.options.map((option) => (
                 <button
-                  className="qa__option"
+                  className="ans__opt"
                   key={option}
                   type="button"
                   onClick={() => {
@@ -103,8 +105,8 @@ export function AnswerForm({
           )}
 
           <textarea
-            className="input qa__input"
-            id={`answer-${q.id}`}
+            className="ans__input"
+            id={`ans-${q.id}`}
             rows={2}
             value={answers[q.id] ?? ''}
             placeholder="Your answer"
@@ -117,16 +119,16 @@ export function AnswerForm({
       ))}
 
       {error !== null && (
-        <p className="authForm__error" role="alert">
+        <p className="ans__error" role="alert">
           {error}
         </p>
       )}
 
-      <button className="btn btn--accent" type="submit" disabled={pending || !complete}>
+      <button className="ans__go" type="submit" disabled={!complete || pending}>
         {pending
           ? 'Recording…'
           : complete
-            ? `Submit ${String(questions.length)} answer${questions.length === 1 ? '' : 's'}`
+            ? `Send ${String(questions.length)} answer${questions.length === 1 ? '' : 's'}`
             : 'Answer every question to continue'}
       </button>
     </form>

@@ -1,6 +1,7 @@
 import { UpstreamError, ValidationError } from '@agentforge/contract';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { REPO_ROOT } from '@agentforge/db';
 
 /**
  * Which gateway we talk to.
@@ -55,13 +56,18 @@ export function loadEnvFile(path = '.env'): void {
   // having a working .env on the machine would turn an offline test run into a paid one.
   if (process.env['SDD_NO_ENV_FILE'] === '1') return;
 
-  // `turbopackIgnore` because this is a dynamic path, and the bundler's static
-  // analysis otherwise concludes it must trace the entire project into the server
-  // bundle — every source file and the public folder with it. The path is only ever a
-  // file in the working directory, and the Next server does not rely on this at all:
-  // Next loads .env itself before any of this runs. It exists for the CLI scripts and
-  // the eval harness, which are plain Node and would otherwise each need their own flag.
-  const file = resolve(/* turbopackIgnore: true */ process.cwd(), path);
+  // Anchored to the repository root, not `process.cwd()`.
+  //
+  // The Next dev server runs with its working directory set to `apps/web`, so a
+  // cwd-relative lookup searched `apps/web/.env` — which does not exist — and the
+  // application started with no API key while the key sat in the root `.env` all along.
+  // The failure surfaced as "no ANTHROPIC_API_KEY or OPENROUTER_API_KEY is set" from a
+  // button press, which is a confusing way to learn where a file was being looked for.
+  // The database path had exactly this bug and is anchored the same way.
+  //
+  // `turbopackIgnore` because the path is still dynamic to the bundler's static
+  // analysis, which would otherwise trace the whole project into the server bundle.
+  const file = resolve(/* turbopackIgnore: true */ REPO_ROOT, path);
   if (!existsSync(file)) return;
 
   try {

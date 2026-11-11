@@ -19,8 +19,15 @@ process.env['SDD_MODEL_REQUIREMENTS'] = 'claude-haiku-5-5';
 process.env['SDD_MODEL_DESIGN'] = 'claude-haiku-5-5';
 
 const { getDb, closeDb } = await import('@agentforge/db');
-const { createSpec, decideArtifact, getHeadArtifact, getSpec, listArtifactVersions, transition } =
-  await import('@agentforge/orchestrator');
+const {
+  createSpec,
+  decideArtifact,
+  getHeadArtifact,
+  getSpec,
+  listArtifactVersions,
+  listAuditEntries,
+  transition,
+} = await import('@agentforge/orchestrator');
 const contract = await import('@agentforge/contract');
 const { installStub } = await import('../../../packages/llm/test/stub.ts');
 
@@ -278,7 +285,11 @@ describe('POST /api/specs/:id/requirements/draft', () => {
     expect(error.correlation_id).toMatch(/^run_/);
   });
 
-  it('maps a wrong-state draft to 409', async () => {
+  it('starts the stage from CREATED, moving the spec as the orchestrator', async () => {
+    // This used to be a 409, which encoded a real limitation rather than a rule:
+    // `CREATED -> REQ_DRAFTING` has always been a legal edge, but no route ever took it,
+    // so a spec could be created over HTTP and then never started. An interface could
+    // not drive the pipeline at all.
     const spec = createSpec(getDb(), {
       title: 'Still created',
       description: 'Has not started drafting.',
@@ -287,16 +298,67 @@ describe('POST /api/specs/:id/requirements/draft', () => {
       actor: HUMAN,
     });
 
+    stub.reply({ output: REQUIREMENTS_OUTPUT });
+
+    const parsed = contract.DraftArtifactResponseSchema.parse(
+      await json(
+        await draftRequirements(spec.id, {
+          expected_version: spec.version,
+          idempotency_key: 'from-created',
+        }),
+        200,
+      ),
+    );
+
+    expect(parsed.spec.status).toBe('REQ_AWAITING_APPROVAL');
+
+    // The orchestrator made the move, not the agent. Keeping those two actors apart is
+    // what lets the audit log prove no agent advanced its own work.
+    const entry = listAuditEntries(getDb(), spec.id).find(
+      (row) => row.fromState === 'CREATED' && row.toState === 'REQ_DRAFTING',
+    );
+    expect(entry?.actorType).toBe('orchestrator');
+  });
+
+  it('still refuses to draft away from a pending approval gate', async () => {
+    // The transition table permits `REQ_AWAITING_APPROVAL -> REQ_DRAFTING`, and the
+    // route deliberately does not take it. Abandoning a gate a human has not answered is
+    // a decision they should make explicitly through `request_changes`, not something
+    // that happens because someone pressed draft again.
+    const specId = await specAwaitingApproval('Pending gate');
+
     const body = await json(
-      await draftRequirements(spec.id, {
-        expected_version: spec.version,
-        idempotency_key: 'wrong-state',
+      await draftRequirements(specId, {
+        expected_version: version(specId),
+        idempotency_key: 'pending-gate',
       }),
       409,
     );
+
     expect(contract.ApiErrorSchema.parse(body).error.code).toBe('PRECONDITION_FAILED');
+    // Nothing moved, and no model call was made.
+    expect(getSpec(getDb(), specId)?.status).toBe('REQ_AWAITING_APPROVAL');
   });
 });
+
+/** Drives a spec to REQ_AWAITING_APPROVAL through the real drafting route. */
+async function specAwaitingApproval(title: string): Promise<string> {
+  const spec = createSpec(getDb(), {
+    title,
+    description: 'Needs a decision before anything else happens.',
+    mode: 'greenfield',
+    repo_path: null,
+    actor: HUMAN,
+  });
+
+  stub.reply({ output: REQUIREMENTS_OUTPUT });
+  await draftRequirements(spec.id, {
+    expected_version: spec.version,
+    idempotency_key: `awaiting-${spec.id}`,
+  });
+
+  return spec.id;
+}
 
 describe('POST /api/specs/:id/design/draft', () => {
   /** Drives a spec to DESIGN_DRAFTING through the real approval gate. */

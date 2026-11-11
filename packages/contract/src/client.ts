@@ -5,6 +5,8 @@ import {
   CreateSpecResponseSchema,
   DecideArtifactRequestSchema,
   DecideArtifactResponseSchema,
+  DraftArtifactRequestSchema,
+  DraftArtifactResponseSchema,
   DiffArtifactResponseSchema,
   GetArtifactResponseSchema,
   GetAuditResponseSchema,
@@ -17,6 +19,8 @@ import {
   ListSpecsResponseSchema,
   ListTasksResponseSchema,
   ROUTES,
+  ScanContextRequestSchema,
+  ScanContextResponseSchema,
 } from './api.ts';
 import { AgentForgeError, ApiErrorSchema } from './errors.ts';
 import type { ArtifactKind, SpecMode, SpecState } from './states.ts';
@@ -207,6 +211,64 @@ export function createClient(options: ClientOptions = {}) {
           body: DecideArtifactRequestSchema.parse(body),
         },
         DecideArtifactResponseSchema,
+      ),
+
+    /**
+     * Runs the Context Agent over the spec's repository.
+     *
+     * Slow by nature: a scan parses the repository, summarises its modules and then runs
+     * a budgeted agentic loop. Callers should expect tens of seconds.
+     */
+    scanContext: async (id: string, body: z.input<typeof ScanContextRequestSchema>) =>
+      await request(
+        'scanContext',
+        {
+          method: 'POST',
+          path: `/api/specs/${id}/context/scan`,
+          body: ScanContextRequestSchema.parse(body),
+        },
+        ScanContextResponseSchema,
+      ),
+
+    /**
+     * Runs the Requirement Agent.
+     *
+     * May come back having asked questions instead of proposing — check `clarifications`
+     * on the response rather than assuming an artifact.
+     */
+    draftRequirements: async (id: string, body: z.input<typeof DraftArtifactRequestSchema>) =>
+      await request(
+        'draftRequirements',
+        {
+          method: 'POST',
+          path: `/api/specs/${id}/requirements/draft`,
+          body: DraftArtifactRequestSchema.parse(body),
+        },
+        DraftArtifactResponseSchema,
+      ),
+
+    /** Runs the Design Agent against the *approved* requirements. */
+    draftDesign: async (id: string, body: z.input<typeof DraftArtifactRequestSchema>) =>
+      await request(
+        'draftDesign',
+        {
+          method: 'POST',
+          path: `/api/specs/${id}/design/draft`,
+          body: DraftArtifactRequestSchema.parse(body),
+        },
+        DraftArtifactResponseSchema,
+      ),
+
+    /** Runs the Task Agent against the approved design. */
+    generateTasks: async (id: string, body: z.input<typeof DraftArtifactRequestSchema>) =>
+      await request(
+        'generateTasks',
+        {
+          method: 'POST',
+          path: `/api/specs/${id}/tasks/generate`,
+          body: DraftArtifactRequestSchema.parse(body),
+        },
+        DraftArtifactResponseSchema,
       ),
 
     listClarifications: async (id: string) =>
