@@ -18,6 +18,10 @@ coverage/
 data/
 .eval-cache/
 
+# Incremental typecheck cache. A build artifact: it changes on every typecheck, so
+# tracking it means every build produces a diff and every commit carries noise.
+*.tsbuildinfo
+
 # os / editor
 .DS_Store
 Thumbs.db
