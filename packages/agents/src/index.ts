@@ -17,6 +17,8 @@ export {
 
 export { draftDesign, type DraftDesignInput, type DraftDesignResult } from './design.ts';
 
+export { generateTasks, type GenerateTasksInput, type GenerateTasksResult } from './task.ts';
+
 export {
   checkAllCitations,
   checkCitations,
@@ -27,6 +29,7 @@ export {
 export {
   approvedArtifactSection,
   clarificationSection,
+  compliancePackSection,
   contextSummarySection,
   evidenceSection,
   requestSection,

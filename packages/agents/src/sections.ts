@@ -16,6 +16,17 @@ import type { ClarificationView, SpecRow } from '@agentforge/orchestrator';
  * id. `buildSystem` enforces that; these builders are written to satisfy it.
  */
 
+/**
+ * The applicable compliance rules, rendered for the prompt.
+ *
+ * Stable, so it sits inside the cached prefix immediately after the skill instructions —
+ * the order the caching convention fixes. Empty when no rule applies, in which case
+ * `buildSystem` drops the block rather than emitting an empty one.
+ */
+export function compliancePackSection(renderedPack: string): PromptSection {
+  return { name: 'compliance-pack', text: renderedPack, stable: true };
+}
+
 /** The agent's instructions, loaded from its SKILL.md. Always the first stable block. */
 export function skillSection(name: SkillName): PromptSection {
   return { name: `skill:${name}`, text: skillInstructions(name), stable: true };

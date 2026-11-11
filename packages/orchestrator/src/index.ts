@@ -100,6 +100,16 @@ export {
   tasksWithMissingDependencies,
 } from './tasks.ts';
 
+export {
+  blockTask,
+  completeTask,
+  startTask,
+  type BlockTaskInput,
+  type CompleteTaskInput,
+  type CompleteTaskResult,
+  type StartTaskInput,
+} from './task-lifecycle.ts';
+
 export { headArtifact, runGuards, type GuardContext } from './guards.ts';
 export { newId, type IdPrefix } from './ids.ts';
 export { logger, newCorrelationId, runLogger } from './logger.ts';

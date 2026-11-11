@@ -155,6 +155,18 @@ export class UpstreamError extends AgentForgeError {
   }
 }
 
+/**
+ * A blocking compliance rule is violated.
+ *
+ * Distinct from a grounding failure: the artifact may be perfectly well evidenced and
+ * still assert dissolved law, which is the case the versioned pack exists to catch.
+ */
+export class ComplianceViolationError extends AgentForgeError {
+  constructor(message: string, details?: unknown) {
+    super('COMPLIANCE_VIOLATION', message, details === undefined ? {} : { details });
+  }
+}
+
 /** A path resolved outside the repository root, or tried to. */
 export class PathEscapesRootError extends AgentForgeError {
   constructor(message: string, details?: unknown) {

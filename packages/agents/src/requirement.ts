@@ -6,6 +6,7 @@ import {
 } from '@agentforge/contract';
 import { parseJsonColumn, type Db } from '@agentforge/db';
 import { complete } from '@agentforge/llm';
+import { applicableRules, renderPackForPrompt } from '@agentforge/compliance';
 import {
   askClarifications,
   findArtifactByIdempotencyKey,
@@ -25,6 +26,7 @@ import { checkAllCitations, describeViolations } from './citations.ts';
 import { renderRequirements } from './render/index.ts';
 import {
   clarificationSection,
+  compliancePackSection,
   contextSummarySection,
   evidenceSection,
   requestSection,
@@ -125,6 +127,10 @@ export async function draftRequirements(
   const clarifications = listClarifications(db, spec.id);
   const used = roundsUsed(clarifications);
 
+  // Only the rules that genuinely apply. Handing over all fifteen would bury the
+  // relevant ones, and a reviewer faced with irrelevant criteria stops reading them.
+  const rules = applicableRules({ title: spec.title, description: spec.description });
+
   const { output: proposal, costUsd } = await complete({
     db,
     specId: spec.id,
@@ -134,6 +140,7 @@ export async function draftRequirements(
     schemaName: 'requirements_proposal',
     sections: [
       skillSection('sdd-requirements'),
+      compliancePackSection(renderPackForPrompt(rules)),
       contextSummarySection(null, []),
       evidenceSection(evidence),
       requestSection(spec),

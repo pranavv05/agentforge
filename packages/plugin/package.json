@@ -12,6 +12,11 @@
   "dependencies": {
     "@agentforge/contract": "*",
     "@agentforge/db": "*",
+    "@agentforge/mcp-server": "*",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "better-sqlite3": "^12.2.0"
+  },
+  "devDependencies": {
+    "@agentforge/orchestrator": "*"
   }
 }

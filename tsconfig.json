@@ -11,7 +11,9 @@
       "@agentforge/context-agent": ["./packages/context-agent/src/index.ts"],
       "@agentforge/compliance": ["./packages/compliance/src/index.ts"],
       "@agentforge/skills": ["./packages/skills/src/index.ts"],
-      "@agentforge/eval": ["./packages/eval/src/index.ts"]
+      "@agentforge/eval": ["./packages/eval/src/index.ts"],
+      "@agentforge/mcp-server": ["./packages/mcp-server/src/index.ts"],
+      "@agentforge/plugin": ["./packages/plugin/src/index.ts"]
     }
   },
   "include": [

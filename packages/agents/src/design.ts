@@ -2,12 +2,20 @@ import {
   ContextBundleSchema,
   type DesignProposal,
   DesignProposalSchema,
+  ComplianceViolationError,
   GroundingError,
   RequirementsProposalSchema,
   TransitionError,
 } from '@agentforge/contract';
 import { type Db, parseJsonColumn } from '@agentforge/db';
 import { complete } from '@agentforge/llm';
+import {
+  applicableRules,
+  blockingViolations,
+  describeViolation,
+  detectSupersededTerms,
+  renderPackForPrompt,
+} from '@agentforge/compliance';
 import {
   findArtifactByIdempotencyKey,
   getHeadArtifact,
@@ -25,6 +33,7 @@ import { checkAllCitations, describeViolations } from './citations.ts';
 import { renderDesign } from './render/index.ts';
 import {
   approvedArtifactSection,
+  compliancePackSection,
   contextSummarySection,
   evidenceSection,
   requestSection,
@@ -128,6 +137,17 @@ export async function draftDesign(db: Db, input: DraftDesignInput): Promise<Draf
     schemaName: 'design_proposal',
     sections: [
       skillSection('sdd-design'),
+      compliancePackSection(
+        renderPackForPrompt(
+          applicableRules({
+            title: spec.title,
+            description: spec.description,
+            requirementText: requirements.requirements.map(
+              (req) => `${req.ears_statement} ${req.rationale}`,
+            ),
+          }),
+        ),
+      ),
       contextSummarySection(bundle?.summary ?? null, bundle?.open_questions ?? []),
       evidenceSection(evidence),
       approvedArtifactSection('requirements', requirementsArtifact.contentMd),
@@ -162,6 +182,30 @@ export async function draftDesign(db: Db, input: DraftDesignInput): Promise<Draf
     throw new GroundingError(
       `the design references requirement id(s) that do not exist: ${unknown.join(', ')}`,
       { spec_id: spec.id, unknown },
+    );
+  }
+
+  // Superseded statutory terminology. A design citing Section 194J reads perfectly and
+  // would pass any human skim, but the 194-series was dissolved on 1 April 2026 — so it
+  // is wrong law, and exactly what a static checklist could never catch.
+  const supersededViolations = detectSupersededTerms([
+    { location: 'design.overview', text: proposal.overview },
+    ...proposal.sections.map((section, i) => ({
+      location: `design.sections[${String(i)}].body`,
+      text: section.body,
+    })),
+    ...proposal.decisions.map((decision, i) => ({
+      location: `design.decisions[${String(i)}].rationale`,
+      text: decision.rationale,
+    })),
+  ]);
+
+  const blocking = blockingViolations(supersededViolations);
+  if (blocking.length > 0) {
+    log.warn({ violations: blocking }, 'design cites superseded statutory terminology');
+    throw new ComplianceViolationError(
+      `the design cites superseded law: ${blocking.map(describeViolation).join(' ')}`,
+      { spec_id: spec.id, violations: blocking },
     );
   }
 

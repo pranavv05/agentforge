@@ -1,0 +1,18 @@
+{
+  "name": "agentforge-sdd",
+  "displayName": "AgentForge SDD",
+  "version": "0.1.0",
+  "description": "Implement an approved AgentForge spec: exposes the orchestrator over MCP and refuses file edits outside an approved implementation state.",
+  "author": { "name": "AgentForge" },
+  "keywords": ["spec-driven-development", "governance", "compliance"],
+  "mcpServers": {
+    "agentforge-sdd": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/src/bin.ts"],
+      "env": {
+        "SDD_DB_PATH": "${SDD_DB_PATH}",
+        "SDD_SPEC_ID": "${SDD_SPEC_ID}"
+      }
+    }
+  }
+}

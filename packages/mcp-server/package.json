@@ -13,7 +13,7 @@
     "@agentforge/contract": "*",
     "@agentforge/db": "*",
     "@agentforge/orchestrator": "*",
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   }
 }

@@ -12,6 +12,15 @@ three things none of them claim:
    database level, and a Claude Code `PreToolUse` hook denies file edits outside an
    approved state. In the comparable tools, gates are conventions a model or human is
    trusted to follow.
+
+   Scope of the hook, stated precisely because the claim is only worth what it can
+   back: it governs sessions pinned to a spec (via `SDD_SPEC_ID` or
+   `.sdd/current-spec`), refuses Edit/Write/NotebookEdit/MultiEdit outside
+   `READY_FOR_IMPLEMENTATION`/`IMPLEMENTING` *and* when no task is claimed, and fails
+   closed on any internal error. The threat model is a capable model drifting off-spec,
+   not an adversary with shell access. Whether a `PreToolUse` hook still applies under
+   `bypassPermissions` is **not confirmed** — do not claim it does without testing it in
+   a live session.
 2. **Evidence-checked brownfield specs.** Every claim an agent makes about existing code
    carries a `file:line` reference that deterministic code verifies. Claims that fail are
    flagged before they reach a document, and the *unverified-claim rate* is reported as a
@@ -164,22 +173,35 @@ The suites that are load-bearing rather than incidental:
 | `llm/test/cassette.test.ts` | replay is offline and free, and a prompt edit misses rather than passing against a stale recording |
 | `agents/test/agents.test.ts` | greenfield CREATED → DESIGN_AWAITING_APPROVAL through the real gates; a citation to an invented file is refused |
 | `skills/test/skills.test.ts` | the prompt instructions the grounding guarantee depends on are still present |
+| `plugin/test/hook.test.ts` | the hook, run as a real subprocess, denies edits in all 8 pre-release states and fails closed |
+| `mcp-server/test/server.test.ts` | the agent's whole tool surface, driven through a real MCP client; nothing can approve |
+| `compliance/test/compliance.test.ts` | Section 194J is caught and mapped to 393; source disagreements stay disclosed |
 
 ## Current state
 
-Days 1-2 of 5 are complete. Day 1: contract frozen, schema and orchestrator built and
-tested, read and approval APIs live, fixtures seeded. Day 2: the Claude API wrapper, the
-four SKILL.md prompts, the Requirement and Design agents, their routes, and SSE
-streaming. A greenfield spec runs CREATED → DESIGN_AWAITING_APPROVAL through the real
-gates. CI green throughout.
+Days 1-3 of 5 are complete; CI green throughout.
+
+- **Day 1** — contract frozen, schema and orchestrator built and tested, read and
+  approval APIs live, fixtures seeded.
+- **Day 2** — the Claude API wrapper, the four SKILL.md prompts, the Requirement and
+  Design agents, their routes, and SSE streaming.
+- **Day 3** — the 15-rule GST/TDS compliance pack with superseded-term detection and the
+  trace matrix; the Task Agent; the MCP server; and the Claude Code plugin with the
+  `PreToolUse` hook.
 
 **No API key is configured yet**, so no agent has been run against the live API. The
-agent suite runs against an injected stub client, which exercises every line of the
-production path except the HTTP call itself. Before the demo, run the pipeline once with
+agent suites inject a stub client, which exercises every line of the production path
+except the HTTP call itself. Before the demo, run the pipeline once with
 `ANTHROPIC_API_KEY` set and `SDD_CASSETTE_MODE=record` to capture real cassettes, then
-switch CI to `replay`. Treat the current prompt quality as untested against a real model.
+switch CI to `replay`. Treat prompt quality as untested against a real model.
+
+**The compliance pack has not been reviewed by a tax professional.** Rates and payment
+codes are encoded only where the research document states them; everything else is a
+structural obligation rather than an invented number. Known source disagreements are
+recorded in each rule's `source_conflict_note` and asserted by tests so they cannot be
+tidied away. Confirm every rate, threshold and code against the CBDT portal and the
+current NIC e-invoice schema before any real use.
 
 Not yet built — the `PENDING` list in `apps/web/test/routes.test.ts` is the authoritative
-record, and that test fails if an entry goes stale: the Context Agent, the Task Agent,
-the compliance pack and trace matrix, the MCP server, the Claude Code plugin, and the
-eval harness.
+record, and that test fails if an entry goes stale: the Context Agent (stages 0-3 and the
+grounding verifier) and the eval harness.

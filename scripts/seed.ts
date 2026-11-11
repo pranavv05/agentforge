@@ -41,6 +41,7 @@ import {
   writeArtifact,
   type Actor,
 } from '@agentforge/orchestrator';
+import { loadPack } from '@agentforge/compliance';
 import { eq, like } from 'drizzle-orm';
 
 const REVIEWER: Actor = { id: 'reviewer@agentforge.local', type: 'human' };
@@ -636,6 +637,15 @@ function seedSpecC(): string {
 }
 
 clearFixtures();
+
+// The compliance pack is reference data, not a fixture: it is installed rather than
+// cleared, and an approval records the version it was granted under.
+const packRules = loadPack(db);
+console.log(
+  packRules === 0
+    ? 'compliance pack already installed'
+    : `installed ${String(packRules)} compliance rule(s)`,
+);
 
 const ids = {
   'requirements gate, 2 versions, 1 open clarification': seedSpecA(),

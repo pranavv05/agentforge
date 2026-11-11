@@ -12,6 +12,10 @@
   "dependencies": {
     "@agentforge/contract": "*",
     "@agentforge/db": "*",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@agentforge/orchestrator": "*"
+  },
+  "devDependencies": {
+    "@agentforge/llm": "*"
   }
 }
