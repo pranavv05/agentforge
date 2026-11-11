@@ -191,7 +191,19 @@ export function Thread({
                 </span>
 
                 {item.evidence !== null && item.evidence.length > 0 && (
-                  <p className="work__evidence">{item.evidence}</p>
+                  // Real completion evidence runs to hundreds of words — a Claude Code
+                  // session names every file, every criterion and everything it could
+                  // not verify. That is exactly what should be recorded, and exactly
+                  // what should not be shouted at someone scrolling the conversation.
+                  // Collapsed here, in full on demand, never truncated in the database.
+                  <details className="work__eviWrap">
+                    <summary className="work__eviPeek">
+                      {item.evidence.length > 150
+                        ? `${item.evidence.slice(0, 150).trimEnd()}…`
+                        : item.evidence}
+                    </summary>
+                    <p className="work__evidence">{item.evidence}</p>
+                  </details>
                 )}
               </div>
             </li>

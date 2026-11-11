@@ -22,10 +22,26 @@ export const CURRENT_SPEC_FILE = join('.sdd', 'current-spec');
 
 const SPEC_ID_PATTERN = /^spec_[0-9a-z]{8,}$/;
 
+/**
+ * `${FOO}` that nothing expanded.
+ *
+ * A plugin manifest or a shell wrapper can declare `"SDD_SPEC_ID": "${SDD_SPEC_ID}"`
+ * and, when the variable is unset, the literal text arrives instead. That string is
+ * non-empty, so it beat the `.sdd/current-spec` fallback and made every tool fail
+ * validation — the fallback was unreachable through the plugin, which is how a real
+ * Claude Code session got no further than its first tool call.
+ *
+ * Treating it as unset is strictly better than failing on it: there is no environment in
+ * which `${SDD_SPEC_ID}` is a legitimate value.
+ */
+function isUnexpandedPlaceholder(value: string): boolean {
+  return /^\${[A-Za-z_][A-Za-z0-9_]*}$/.test(value);
+}
+
 /** Reads the spec id for this session, or null when the session is not scoped to one. */
 export function resolveSpecId(cwd: string = process.cwd()): string | null {
   const fromEnv = process.env['SDD_SPEC_ID']?.trim();
-  if (fromEnv !== undefined && fromEnv.length > 0) {
+  if (fromEnv !== undefined && fromEnv.length > 0 && !isUnexpandedPlaceholder(fromEnv)) {
     return assertSpecIdShape(fromEnv, 'SDD_SPEC_ID');
   }
 

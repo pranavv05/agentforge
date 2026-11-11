@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TasksProposalSchema, type SpecState } from '@agentforge/contract';
@@ -500,6 +500,88 @@ describe('complete_task', () => {
 
     expect(current(specId).status).toBe('DONE');
     expect(listAuditEntries(db, specId).at(-1)?.toState).toBe('DONE');
+  });
+});
+
+describe('an unexpanded environment placeholder', () => {
+  /*
+   * Found by a real Claude Code session, not by this suite.
+   *
+   * The plugin manifest used to declare `"SDD_SPEC_ID": "${SDD_SPEC_ID}"`. Claude Code
+   * passes that through literally when the variable is unset, so the server started with
+   * the eight characters `${SDD_SPEC_ID}` as its spec id. Being non-empty, it outranked
+   * the `.sdd/current-spec` fallback, and every single tool failed validation before
+   * doing anything — the fallback that CLAUDE.md documents was unreachable through the
+   * plugin, which is the only way the plugin is actually used.
+   *
+   * Nothing here was wrong in isolation, which is why 870-odd tests missed it. The
+   * manifest no longer sets the variable at all; this is the second line of defence.
+   */
+  const PLACEHOLDER = '${SDD_SPEC_ID}';
+
+  it('is ignored, so the file fallback is reachable', () => {
+    const previous = process.env['SDD_SPEC_ID'];
+    process.env['SDD_SPEC_ID'] = PLACEHOLDER;
+
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'agentforge-placeholder-'));
+      mkdirSync(join(dir, '.sdd'), { recursive: true });
+      writeFileSync(join(dir, '.sdd', 'current-spec'), 'spec_abcdef123456\n');
+
+      // The placeholder is discarded and the pinned file wins, which is what a plugin
+      // session depends on.
+      expect(resolveSpecId(dir)).toBe('spec_abcdef123456');
+      rmSync(dir, { recursive: true, force: true });
+    } finally {
+      if (previous === undefined) delete process.env['SDD_SPEC_ID'];
+      else process.env['SDD_SPEC_ID'] = previous;
+    }
+  });
+
+  it('reads as no spec at all when nothing else pins one', () => {
+    const previous = process.env['SDD_SPEC_ID'];
+    process.env['SDD_SPEC_ID'] = PLACEHOLDER;
+
+    try {
+      const dir = mkdtempSync(join(tmpdir(), 'agentforge-placeholder-'));
+      // null, not a thrown validation error: a session that is not implementing a spec
+      // must simply not be governed by one.
+      expect(resolveSpecId(dir)).toBeNull();
+      rmSync(dir, { recursive: true, force: true });
+    } finally {
+      if (previous === undefined) delete process.env['SDD_SPEC_ID'];
+      else process.env['SDD_SPEC_ID'] = previous;
+    }
+  });
+
+  it('still rejects a value that is merely wrong', () => {
+    const previous = process.env['SDD_SPEC_ID'];
+    process.env['SDD_SPEC_ID'] = 'not-a-spec-id';
+
+    try {
+      // Only the placeholder shape is forgiven. A typo is still an error with a message,
+      // because that one a person can fix.
+      expect(() => resolveSpecId(tmpdir())).toThrow(/does not look like a spec id/);
+    } finally {
+      if (previous === undefined) delete process.env['SDD_SPEC_ID'];
+      else process.env['SDD_SPEC_ID'] = previous;
+    }
+  });
+
+  it('is not shipped by the plugin manifest any more', () => {
+    // The actual fix. The server inherits the real environment instead, so an unset
+    // variable is simply unset.
+    const manifest = JSON.parse(
+      readFileSync(
+        join(import.meta.dirname, '..', '..', 'plugin', '.claude-plugin', 'plugin.json'),
+        'utf8',
+      ),
+    ) as { mcpServers: Record<string, { env?: Record<string, string> }> };
+
+    const server = manifest.mcpServers['agentforge-sdd'];
+    for (const value of Object.values(server?.env ?? {})) {
+      expect(value, 'manifest passes a placeholder nothing expands').not.toMatch(/^\${/);
+    }
   });
 });
 

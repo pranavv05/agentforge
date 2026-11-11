@@ -99,7 +99,9 @@ async function readStdin(): Promise<string> {
 /** The spec this session is implementing, or null when it is not implementing one. */
 function resolveSpecId(cwd: string): string | null {
   const fromEnv = process.env['SDD_SPEC_ID']?.trim();
-  if (fromEnv !== undefined && fromEnv.length > 0) return fromEnv;
+  if (fromEnv !== undefined && fromEnv.length > 0 && !isUnexpandedPlaceholder(fromEnv)) {
+    return fromEnv;
+  }
 
   const file = resolve(cwd, join('.sdd', 'current-spec'));
   if (!existsSync(file)) return null;
@@ -108,10 +110,25 @@ function resolveSpecId(cwd: string): string | null {
   return firstLine.length > 0 ? firstLine : null;
 }
 
+/**
+ * `${FOO}` that nothing expanded.
+ *
+ * Kept in step with the same check in the MCP server: a manifest or wrapper declaring
+ * `"SDD_SPEC_ID": "${SDD_SPEC_ID}"` passes the literal text through when the variable is
+ * unset, and a non-empty garbage value would otherwise outrank `.sdd/current-spec`.
+ */
+function isUnexpandedPlaceholder(value: string): boolean {
+  return /^\${[A-Za-z_][A-Za-z0-9_]*}$/.test(value);
+}
+
 /** The database path, resolved the same way the application resolves it. */
 function resolveDbPath(cwd: string): string {
-  const configured = process.env['SDD_DB_PATH'] ?? './data/agentforge.db';
-  return isAbsolute(configured) ? configured : resolve(cwd, configured);
+  const fromEnv = process.env['SDD_DB_PATH']?.trim();
+  const usable =
+    fromEnv !== undefined && fromEnv.length > 0 && !isUnexpandedPlaceholder(fromEnv)
+      ? fromEnv
+      : './data/agentforge.db';
+  return isAbsolute(usable) ? usable : resolve(cwd, usable);
 }
 
 interface SpecRow {

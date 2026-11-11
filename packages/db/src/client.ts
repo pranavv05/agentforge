@@ -44,7 +44,16 @@ export const REPO_ROOT = resolve(PACKAGE_SRC_DIR, '..', '..', '..');
  * repository root, so every entry point agrees on which file is the database.
  */
 export function resolveDbPath(explicit?: string): string {
-  const configured = explicit ?? process.env['SDD_DB_PATH'] ?? './data/agentforge.db';
+  const fromEnv = process.env['SDD_DB_PATH'];
+  // An unexpanded `${SDD_DB_PATH}` from a plugin manifest or wrapper script is not a
+  // path. Falling back to the default beats resolving a directory literally named
+  // "${SDD_DB_PATH}" and reporting that the database is missing.
+  const usable =
+    fromEnv !== undefined && !/^\${[A-Za-z_][A-Za-z0-9_]*}$/.test(fromEnv.trim())
+      ? fromEnv
+      : undefined;
+
+  const configured = explicit ?? usable ?? './data/agentforge.db';
   if (isAbsolute(configured)) return configured;
   // Dynamic by nature (runtime configuration); the opt-out stops Turbopack tracing the
   // whole project into the server bundle.

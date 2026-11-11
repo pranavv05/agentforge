@@ -1544,3 +1544,44 @@
 .prog__task.is-blocked .prog__state {
   color: var(--ws-warn);
 }
+
+.work__eviWrap {
+  margin-top: 0.3rem;
+}
+
+/*
+ * Completion evidence is long by design — the agent names files, criteria and anything
+ * it could not verify. Collapsed so it does not swamp the conversation; never shortened
+ * in the record itself.
+ */
+.work__eviPeek {
+  cursor: pointer;
+  padding: 0.4rem 0.55rem;
+  border-left: 2px solid var(--ws-line-strong);
+  border-radius: 0 var(--ws-r-sm) var(--ws-r-sm) 0;
+  background: var(--ws-surface);
+  font-size: var(--ws-t-xs);
+  color: var(--ws-ink-soft);
+  list-style: none;
+}
+
+.work__eviPeek::-webkit-details-marker {
+  display: none;
+}
+
+.work__eviPeek:hover {
+  color: var(--ws-ink);
+}
+
+.work__eviPeek:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 2px;
+}
+
+.work__eviWrap[open] .work__eviPeek {
+  display: none;
+}
+
+.work__eviWrap[open] .work__evidence {
+  white-space: pre-wrap;
+}
