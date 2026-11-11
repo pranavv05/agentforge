@@ -36,7 +36,7 @@ npm run dev            # Next.js at http://localhost:3000
 npm run db:migrate     # apply SQL migrations (idempotent, checksum-guarded)
 npm run db:seed        # load three fixture specs at different lifecycle points
 npm run db:reset       # delete the database and re-migrate (refuses paths outside cwd)
-npm run ci             # typecheck + lint + format:check + test with coverage thresholds
+npm run ci             # typecheck + lint + format:check + test with coverage + next build
 npm run test           # vitest
 npm run test:watch
 

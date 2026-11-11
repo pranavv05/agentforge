@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidationError } from '@agentforge/contract';
@@ -125,13 +125,9 @@ export function writeCassette(key: string, cassette: Cassette): string {
   return path;
 }
 
-/** Every recorded key. Used by the cassette-coverage test. */
-export function listCassettes(): readonly string[] {
-  if (!existsSync(cassetteDir())) return [];
-  return readdirSync(cassetteDir())
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => f.replace(/\.json$/, ''))
-    .sort();
-}
+// `listCassettes` lives in `cassette-list.ts`, not here. It scans a directory, and this
+// module is reachable from a Next API route through the client — which makes the bundler
+// trace the entire project into the server bundle. Keeping a test-only directory scan
+// out of that import graph is cheaper than declaring the access safe.
 
 export { DEFAULT_CASSETTE_DIR };

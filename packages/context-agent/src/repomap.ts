@@ -219,7 +219,13 @@ async function grammarFor(language: SupportedLanguage): Promise<Language | null>
   if (cached !== undefined) return cached;
 
   try {
-    const loaded = await Language.load(readFileSync(`${WASM_DIR}${GRAMMAR_FILE[language]}`));
+    // `turbopackIgnore` because the grammar is chosen by language at runtime. The
+    // directory is fixed and the filenames come from a closed table, so this is not
+    // open-ended — but it is not a literal either, and without the annotation the
+    // bundler traces the whole project into the server bundle.
+    const loaded = await Language.load(
+      readFileSync(/* turbopackIgnore: true */ `${WASM_DIR}${GRAMMAR_FILE[language]}`),
+    );
     grammars.set(language, loaded);
     return loaded;
   } catch {

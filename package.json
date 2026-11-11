@@ -25,7 +25,7 @@
     "db:migrate": "tsx packages/db/src/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx packages/db/src/reset.ts",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run test:cov",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run test:cov && npm run build",
     "sdd:scan": "tsx scripts/scan.ts",
     "sdd:smoke": "tsx scripts/smoke.ts",
     "sdd:smoke:brownfield": "tsx scripts/smoke-brownfield.ts",

@@ -7,7 +7,9 @@ import { createDb, schema, type Db } from '@agentforge/db';
 import { createSpec, getCostSummary, type Actor } from '@agentforge/orchestrator';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { CassetteSchema, cassetteDir, complete, listCassettes } from '../src/index.ts';
+import { CassetteSchema, cassetteDir, complete } from '../src/index.ts';
+// In a module of its own, kept out of the production import graph — see the note there.
+import { listCassettes } from '../src/cassette-list.ts';
 import { installStub, type Stub } from './stub.ts';
 
 /**

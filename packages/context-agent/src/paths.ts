@@ -49,7 +49,14 @@ export function createRepoRoot(path: string): RepoRoot {
     throw new ValidationError('a repository root must not be empty');
   }
 
-  const absolute = isAbsolute(path) ? path : resolve(process.cwd(), path);
+  // `turbopackIgnore` because the path is a repository the caller chose, so it is
+  // dynamic by design — that is the entire purpose of this function. Without the
+  // annotation the bundler concludes it must trace the whole project into the server
+  // bundle. Nothing is read here: the path is only resolved, and every later access
+  // goes through the containment check below.
+  const absolute = isAbsolute(path)
+    ? path
+    : resolve(/* turbopackIgnore: true */ process.cwd(), path);
 
   let real: string;
   try {

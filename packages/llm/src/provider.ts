@@ -55,7 +55,13 @@ export function loadEnvFile(path = '.env'): void {
   // having a working .env on the machine would turn an offline test run into a paid one.
   if (process.env['SDD_NO_ENV_FILE'] === '1') return;
 
-  const file = resolve(process.cwd(), path);
+  // `turbopackIgnore` because this is a dynamic path, and the bundler's static
+  // analysis otherwise concludes it must trace the entire project into the server
+  // bundle — every source file and the public folder with it. The path is only ever a
+  // file in the working directory, and the Next server does not rely on this at all:
+  // Next loads .env itself before any of this runs. It exists for the CLI scripts and
+  // the eval harness, which are plain Node and would otherwise each need their own flag.
+  const file = resolve(/* turbopackIgnore: true */ process.cwd(), path);
   if (!existsSync(file)) return;
 
   try {

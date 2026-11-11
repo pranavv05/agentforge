@@ -20,7 +20,6 @@ export {
   cassetteDir,
   CassetteSchema,
   cassetteKey,
-  listCassettes,
   readCassette,
   writeCassette,
   type Cassette,

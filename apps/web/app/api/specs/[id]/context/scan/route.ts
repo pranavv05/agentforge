@@ -4,7 +4,6 @@ import {
   TransitionError,
 } from '@agentforge/contract';
 import { getDb } from '@agentforge/db';
-import { scanContext } from '@agentforge/context-agent';
 import { requireSpecById } from '@agentforge/orchestrator';
 import { handle, parseBody } from '@/lib/handler';
 import { presentSpec } from '@/lib/present';
@@ -19,7 +18,18 @@ import { presentSpec } from '@/lib/present';
  *
  * `max_tool_calls` may lower the budget but never raise it past the server's ceiling:
  * the cap is the server's to enforce, not the caller's to choose.
+ *
+ * The Context Agent is imported dynamically, inside the handler. It depends on
+ * `web-tree-sitter` and the wasm grammars, and the bundler evaluates a route module
+ * while collecting route configuration at build time — which turns a grammar path into
+ * a module id and fails the build with `TypeError: <number>.replace is not a function`.
+ * Deferring the import keeps the module statically analysable, and costs nothing here
+ * because a scan is a slow, rarely-taken path that already does far more work than one
+ * module resolution.
  */
+
+// Node, not edge: this reads the filesystem, runs SQLite and loads wasm grammars.
+export const runtime = 'nodejs';
 export function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -37,6 +47,8 @@ export function POST(
         { spec_id: id, actual_version: spec.version, expected_version: body.expected_version },
       );
     }
+
+    const { scanContext } = await import('@agentforge/context-agent');
 
     const result = await scanContext(db, {
       specId: id,
