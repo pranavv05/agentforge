@@ -15,9 +15,11 @@
     "@agentforge/llm": "*",
     "@agentforge/skills": "*",
     "graphology": "^0.26.0",
-    "graphology-metrics": "^2.4.0",
-    "tree-sitter-wasms": "^0.1.12",
-    "web-tree-sitter": "^0.25.0",
+    "graphology-metrics": "^2.4.2",
+    "ignore": "^7.0.14",
+    "minimatch": "^11.0.7",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.25.10",
     "zod": "^4.6.7"
   }
 }

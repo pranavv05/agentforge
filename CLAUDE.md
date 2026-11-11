@@ -36,6 +36,7 @@ npm run dev            # Next.js at http://localhost:3000
 npm run db:migrate     # apply SQL migrations (idempotent, checksum-guarded)
 npm run db:seed        # load three fixture specs at different lifecycle points
 npm run db:reset       # delete the database and re-migrate (refuses paths outside cwd)
+npm run sdd:scan -- <repo> [focus...]   # stage-0 scan + verifier demo, no API key, $0
 npm run ci             # typecheck + lint + format:check + test with coverage thresholds
 npm run test           # vitest
 npm run test:watch
@@ -148,6 +149,17 @@ error. Day-1 scaffolding lived behind `SDD_STUB_AGENTS` and is gone.
   costs in the report come from that table, never from an estimate.
 - **Correlation ids** thread through transitions, audit entries and LLM calls, so any run
   can be reconstructed from the database or the logs alone.
+- **The file inventory comes from `git ls-files --cached --others --exclude-standard`**,
+  not ripgrep. The plan specified `rg`, but it is not reliably on PATH (absent on a
+  plain Windows install), and a product must not depend on a binary that happened to be
+  present on the build machine. Git is already a hard dependency for the eval's
+  ground-truth mining. Non-checkout directories fall back to a Node walk that still
+  reads `.gitignore`, because getting that wrong puts a file like `secret.env` into a
+  prompt.
+- **The repo map ranks module-level API only.** Locals, names under three characters,
+  test-file definitions, property accesses and names defined in more than two files are
+  all excluded — each is unresolvable or noise under name-based symbol resolution. See
+  `context-agent/test/repomap-quality.test.ts` for why each filter exists.
 
 ## Testing
 
@@ -176,10 +188,13 @@ The suites that are load-bearing rather than incidental:
 | `plugin/test/hook.test.ts` | the hook, run as a real subprocess, denies edits in all 8 pre-release states and fails closed |
 | `mcp-server/test/server.test.ts` | the agent's whole tool surface, driven through a real MCP client; nothing can approve |
 | `compliance/test/compliance.test.ts` | Section 194J is caught and mapped to 393; source disagreements stay disclosed |
+| `context-agent/test/verifier.test.ts` | adversarial citations: invented files, off-by-one ranges, symlink escapes, CRLF, binaries |
+| `context-agent/test/repomap-quality.test.ts` | the ranking filters, each pinned to the real-repo failure that motivated it |
+| `context-agent/test/scan.test.ts` | path confinement, and the git and fallback inventories agreeing |
 
 ## Current state
 
-Days 1-3 of 5 are complete; CI green throughout.
+Days 1-4 of 5; CI green throughout, 720 tests.
 
 - **Day 1** — contract frozen, schema and orchestrator built and tested, read and
   approval APIs live, fixtures seeded.
@@ -188,12 +203,13 @@ Days 1-3 of 5 are complete; CI green throughout.
 - **Day 3** — the 15-rule GST/TDS compliance pack with superseded-term detection and the
   trace matrix; the Task Agent; the MCP server; and the Claude Code plugin with the
   `PreToolUse` hook.
+- **Day 4 (offline half)** — Context Agent stage 0 (inventory, manifests, tree-sitter
+  repo map, FTS5 index) and stage 3, the grounding verifier. Both are deterministic and
+  need no API key. `npm run sdd:scan` runs them against any repository for nothing.
 
 **No API key is configured yet**, so no agent has been run against the live API. The
 agent suites inject a stub client, which exercises every line of the production path
-except the HTTP call itself. Before the demo, run the pipeline once with
-`ANTHROPIC_API_KEY` set and `SDD_CASSETTE_MODE=record` to capture real cassettes, then
-switch CI to `replay`. Treat prompt quality as untested against a real model.
+except the HTTP call itself. Treat prompt quality as untested against a real model.
 
 **The compliance pack has not been reviewed by a tax professional.** Rates and payment
 codes are encoded only where the research document states them; everything else is a
@@ -202,6 +218,17 @@ recorded in each rule's `source_conflict_note` and asserted by tests so they can
 tidied away. Confirm every rate, threshold and code against the CBDT portal and the
 current NIC e-invoice schema before any real use.
 
-Not yet built — the `PENDING` list in `apps/web/test/routes.test.ts` is the authoritative
-record, and that test fails if an entry goes stale: the Context Agent (stages 0-3 and the
-grounding verifier) and the eval harness.
+Still to build:
+
+- **Context Agent stages 1-2** — per-module summaries via the Batch API, and the
+  budgeted agentic loop. Both need a key. Note the constraint found while researching
+  Groq, which applies here too: structured outputs and tool use cannot be combined in a
+  single call, so the loop needs a tool-use phase followed by a separate
+  schema-constrained call.
+- **The eval harness** — ground-truth mining from git history, the retrieval ablation,
+  and replacing the plan's estimated per-feature costs with measured ones. The
+  deterministic arms (repo map vs FTS5 vs both, scored by recall@k) can run without a
+  key; the agentic arms cannot.
+
+The `PENDING` list in `apps/web/test/routes.test.ts` is the authoritative record of
+unimplemented routes, and that test fails if an entry goes stale.
