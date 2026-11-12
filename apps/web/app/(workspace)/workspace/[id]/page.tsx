@@ -14,7 +14,6 @@ import {
 import {
   APPROVAL_STATE_FOR_ARTIFACT,
   isArtifactKind,
-  isAwaitingHuman,
   type ArtifactKind,
 } from '@agentforge/contract';
 import { buildThread } from '@/lib/thread';
@@ -105,7 +104,6 @@ export default async function ThreadPage({
           title={spec.title}
           status={spec.status}
           mode={spec.mode}
-          awaiting={isAwaitingHuman(spec.status)}
           costUsd={cost.total_cost_usd}
           calls={cost.call_count}
           unverifiedRate={evidence.total === 0 ? null : evidence.unverifiedClaimRate}

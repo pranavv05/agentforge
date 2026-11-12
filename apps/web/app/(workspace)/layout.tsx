@@ -23,6 +23,17 @@ import './workspace.css';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Reads the saved theme and sets it on the document before anything renders.
+ *
+ * Inline and tiny because it has to run before the first paint, not after a round trip.
+ * It mirrors the three states the toggle writes: an explicit choice wins, and anything
+ * else falls through to the `prefers-color-scheme` rules in `workspace.css`.
+ */
+const THEME_BOOT =
+  "try{var t=localStorage.getItem('agentforge-theme');" +
+  "if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}";
+
 export default async function WorkspaceLayout({ children }: { children: ReactNode }) {
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (session === null) redirect('/sign-in');
@@ -37,22 +48,36 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   const role = (session.user as { role?: unknown }).role;
 
   return (
-    <div className="ws">
-      <Rail
-        threads={specs.map((spec) => ({
-          id: spec.id,
-          title: spec.title,
-          status: spec.status,
-          mode: spec.mode,
-          awaiting: isAwaitingHuman(spec.status),
-        }))}
-        user={{
-          name: session.user.name,
-          role: typeof role === 'string' && role.length > 0 ? role : 'reviewer',
-        }}
+    <>
+      {/* Geist Mono, the same face the marketing site sets hashes and state names in.
+          Inter is self-hosted; this is the one webfont the workspace fetches. */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"
+        rel="stylesheet"
       />
+      {/* Applies the saved theme before the first paint. Without it someone who chose
+          dark gets a white flash on every navigation, which is worse than no toggle. */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
 
-      {children}
-    </div>
+      <div className="ws">
+        <Rail
+          threads={specs.map((spec) => ({
+            id: spec.id,
+            title: spec.title,
+            status: spec.status,
+            mode: spec.mode,
+            awaiting: isAwaitingHuman(spec.status),
+          }))}
+          user={{
+            name: session.user.name,
+            role: typeof role === 'string' && role.length > 0 ? role : 'reviewer',
+          }}
+        />
+
+        {children}
+      </div>
+    </>
   );
 }

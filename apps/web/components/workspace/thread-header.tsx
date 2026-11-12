@@ -1,4 +1,5 @@
 import type { SpecMode, SpecState } from '@agentforge/contract';
+import { labelFor, toneFor } from '@/components/workspace/status';
 
 /**
  * The thread header.
@@ -12,7 +13,6 @@ export function ThreadHeader({
   title,
   status,
   mode,
-  awaiting,
   costUsd,
   calls,
   unverifiedRate,
@@ -20,7 +20,6 @@ export function ThreadHeader({
   title: string;
   status: SpecState;
   mode: SpecMode;
-  awaiting: boolean;
   costUsd: number;
   calls: number;
   unverifiedRate: number | null;
@@ -28,9 +27,18 @@ export function ThreadHeader({
   return (
     <header className="thead">
       <div className="thead__main">
+        {/* The feature request, which can be a whole sentence. Two lines rather than an
+            ellipsis: the title is the only thing on screen that says what this spec is
+            for, and "Let a user export a purchase order as a PDF, with the supp…" is
+            not a title. */}
         <h1 className="thead__title">{title}</h1>
-        <span className={`chip${awaiting ? ' chip--warn' : ''}`}>{status}</span>
-        <span className="chip chip--quiet">{mode}</span>
+
+        <div className="thead__chips">
+          <span className={`chip chip--${toneFor(status)}`} title={status}>
+            {labelFor(status)}
+          </span>
+          <span className="chip chip--quiet">{mode}</span>
+        </div>
       </div>
 
       <dl className="thead__stats">

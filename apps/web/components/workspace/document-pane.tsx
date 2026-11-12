@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ArtifactKind, ContextEvidence, SpecState, TaskRow } from '@agentforge/contract';
+import { ContentHash } from '@/components/workspace/hash';
 import { Markdown } from '@/components/ui/markdown';
 import { Grounding } from '@/components/workspace/grounding';
 import { TaskProgress } from '@/components/workspace/task-progress';
@@ -79,10 +80,7 @@ export function DocumentPane({
         </Link>
       </header>
 
-      <div className="pane__hash">
-        <span className="pane__hashLabel">content hash</span>
-        <code>{contentHash}</code>
-      </div>
+      <ContentHash value={contentHash} />
 
       <div className="pane__doc">
         {kind === 'context' && <Grounding evidence={evidence} />}

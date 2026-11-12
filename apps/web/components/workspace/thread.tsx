@@ -97,9 +97,21 @@ export function Thread({
           return (
             <li className={`act act--${item.actorType}`} key={key}>
               <span className="act__dot" aria-hidden="true" />
-              <span className="act__text">{describe(item.toState)}</span>
-              <code className="act__state">{item.toState}</code>
-              <span className="act__by">{item.actorType}</span>
+              <span className="act__text">
+                {describe(item.toState)}
+                {/* Who, in full. This used to be the actor *type* pushed to the far
+                    right, where it clipped; the account is the interesting part and
+                    the audit log records it either way. */}
+                <span className="act__by"> · {item.actor}</span>
+                {/* The machine's own name for the state, kept because this is a
+                    governance tool and a reader may be checking it against the
+                    transition table. Inline rather than pinned right: at this column
+                    width a right-aligned chip collided with the document pane, and
+                    alignment is not worth a collision for secondary information. */}
+                <code className="act__state" title={`Entered state ${item.toState}`}>
+                  {item.toState}
+                </code>
+              </span>
             </li>
           );
         }

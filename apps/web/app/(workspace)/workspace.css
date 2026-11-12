@@ -1,14 +1,18 @@
 /*
  * The workspace.
  *
- * A dark, dense, three-pane surface: threads, conversation, document. It deliberately
- * does not look like the marketing site, for the same reason Linear's app does not look
- * like linear.app — this is somewhere people work for an hour at a time, reading code
- * citations, hashes and state names. Those read better on a dark ground, and colour here
- * is spent on *status* rather than on brand.
+ * A dense three-pane surface: threads, conversation, document. It shares the marketing
+ * site's palette and type on purpose — someone who read the landing page and then signed
+ * in should arrive somewhere that looks like the same product, and the job here is
+ * reading a document closely before binding your name to its hash, which is a
+ * paper-like task rather than a terminal one.
  *
- * Scoped under `.ws` so none of it can leak into the marketing or auth surfaces, which
- * the frontend track owns.
+ * Light is the default. Dark is available, because this is also somewhere people sit for
+ * an hour at a time, and the tokens below are the only thing that changes between them:
+ * every rule in this file is written against a variable, so a theme is a palette and
+ * never a second stylesheet.
+ *
+ * Scoped under `.ws` so none of it leaks into the marketing or auth surfaces.
  */
 
 @font-face {
@@ -22,32 +26,36 @@
 .ws {
   /* Ground and surfaces. Four steps, not two: a sidebar, a thread and a raised card all
      need to sit apart without a border doing all the work. */
-  --ws-ground: #0b0c0d;
-  --ws-sunken: #090a0b;
-  --ws-surface: #141617;
-  --ws-raised: #1a1d1f;
+  --ws-ground: #ffffff;
+  --ws-sunken: #f6f8fb;
+  --ws-surface: #f9fbfd;
+  --ws-raised: #ffffff;
 
-  --ws-ink: #ededf0;
-  --ws-ink-soft: #b4b8bf;
-  --ws-muted: #8a8f98;
-  --ws-faint: #5c6166;
+  --ws-ink: #0b1220;
+  --ws-ink-soft: #2a3342;
+  --ws-muted: #5b6575;
+  --ws-faint: #8a94a6;
 
-  --ws-line: #232629;
-  --ws-line-strong: #2f3337;
+  --ws-line: #e6ebf2;
+  --ws-line-strong: #d6dde8;
 
-  --ws-accent: #5e6ad2;
-  --ws-accent-soft: #7b85dd;
-  --ws-accent-wash: #1a1d33;
+  --ws-accent: #4f8ff0;
+  --ws-accent-soft: #7ab1fe;
+  --ws-accent-wash: #eaf3ff;
 
-  --ws-ok: #3fb950;
-  --ws-ok-wash: #11261a;
-  --ws-warn: #d29922;
-  --ws-warn-wash: #2a2113;
-  --ws-fail: #f85149;
-  --ws-fail-wash: #2d1618;
+  --ws-ok: #16a34a;
+  --ws-ok-wash: #e8f7ee;
+  --ws-warn: #b45309;
+  --ws-warn-wash: #fff4e0;
+  --ws-fail: #dc2626;
+  --ws-fail-wash: #fdecec;
+
+  /* Depth. On light, a card needs a shadow where on dark a lighter fill was enough. */
+  --ws-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -10px rgba(16, 24, 40, 0.1);
+  --ws-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
 
   --ws-font: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --ws-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --ws-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* 13px base. Dense interfaces read smaller than documents do; the document pane
      scales back up, because that is the one place people read continuous prose. */
@@ -70,8 +78,81 @@
   font-family: var(--ws-font);
   font-size: var(--ws-t);
   line-height: 1.55;
-  font-feature-settings: 'cv05' 1; /* single-storey g, closer to the Linear/Inter look */
+  font-feature-settings: 'cv05' 1; /* single-storey g, closer to the Inter display cut */
   overflow: hidden;
+}
+
+/*
+ * Dark.
+ *
+ * Written twice, which is deliberate rather than careless: the media query serves
+ * someone whose system prefers dark and who has never touched the toggle, including
+ * before any JavaScript runs, and the attribute serves someone who chose it. CSS has no
+ * way to share one declaration block between a media query and a plain selector, and
+ * the alternative — resolving the preference in script and emitting only one rule —
+ * means a visitor with JavaScript disabled gets the wrong theme.
+ *
+ * Only colour changes. Any rule that needed a different *shape* in dark would be a sign
+ * the light one was wrong.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ws {
+    --ws-ground: #0b0c0d;
+    --ws-sunken: #090a0b;
+    --ws-surface: #141617;
+    --ws-raised: #1a1d1f;
+
+    --ws-ink: #ededf0;
+    --ws-ink-soft: #b4b8bf;
+    --ws-muted: #8a8f98;
+    --ws-faint: #5c6166;
+
+    --ws-line: #232629;
+    --ws-line-strong: #2f3337;
+
+    --ws-accent: #7b85dd;
+    --ws-accent-soft: #9aa2e8;
+    --ws-accent-wash: #1a1d33;
+
+    --ws-ok: #3fb950;
+    --ws-ok-wash: #11261a;
+    --ws-warn: #d29922;
+    --ws-warn-wash: #2a2113;
+    --ws-fail: #f85149;
+    --ws-fail-wash: #2d1618;
+
+    --ws-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+    --ws-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme='dark'] .ws {
+  --ws-ground: #0b0c0d;
+  --ws-sunken: #090a0b;
+  --ws-surface: #141617;
+  --ws-raised: #1a1d1f;
+
+  --ws-ink: #ededf0;
+  --ws-ink-soft: #b4b8bf;
+  --ws-muted: #8a8f98;
+  --ws-faint: #5c6166;
+
+  --ws-line: #232629;
+  --ws-line-strong: #2f3337;
+
+  --ws-accent: #7b85dd;
+  --ws-accent-soft: #9aa2e8;
+  --ws-accent-wash: #1a1d33;
+
+  --ws-ok: #3fb950;
+  --ws-ok-wash: #11261a;
+  --ws-warn: #d29922;
+  --ws-warn-wash: #2a2113;
+  --ws-fail: #f85149;
+  --ws-fail-wash: #2d1618;
+
+  --ws-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  --ws-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .ws *,
@@ -175,12 +256,15 @@
 }
 
 .rail__item {
+  position: relative;
   display: grid;
-  gap: 0.15rem;
-  padding: 0.45rem 0.5rem;
+  gap: 0.2rem;
+  padding: 0.5rem 0.55rem;
   border-radius: var(--ws-r-sm);
   color: var(--ws-ink-soft);
-  transition: background 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
 
 .rail__item:hover {
@@ -188,8 +272,20 @@
 }
 
 .rail__item[aria-current='page'] {
-  background: var(--ws-surface);
+  background: var(--ws-accent-wash);
   color: var(--ws-ink);
+}
+
+/* A bar rather than only a fill: on light the wash alone is too quiet to find at a
+   glance, which is the one thing this list has to do. */
+.rail__item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.35rem;
+  inset-inline-start: -0.35rem;
+  inline-size: 2px;
+  border-radius: 2px;
+  background: var(--ws-accent);
 }
 
 .rail__title {
@@ -213,11 +309,38 @@
 }
 
 .rail__meta {
+  justify-self: start;
+  max-inline-size: 100%;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--ws-surface);
   font-size: var(--ws-t-xs);
   color: var(--ws-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Four tones, not fifteen. Only `wait` is allowed to pull the eye, because it is the
+   only one that means the reader has something to do. */
+.rail__meta--wait {
+  background: var(--ws-warn-wash);
+  color: var(--ws-warn);
+}
+
+.rail__meta--live {
+  background: var(--ws-accent-wash);
+  color: var(--ws-accent);
+}
+
+.rail__meta--done {
+  background: var(--ws-ok-wash);
+  color: var(--ws-ok);
+}
+
+.rail__meta--fail {
+  background: var(--ws-fail-wash);
+  color: var(--ws-fail);
 }
 
 .rail__foot {
@@ -523,41 +646,57 @@
 .thead {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  padding: 0.7rem 1.25rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--ws-line);
   background: var(--ws-ground);
 }
 
 .thead__main {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 22rem;
 }
 
 .thead__title {
   margin: 0;
-  font-size: var(--ws-t);
+  font-size: 0.9375rem;
   font-weight: 600;
+  line-height: 1.35;
   letter-spacing: -0.01em;
+  color: var(--ws-ink);
+  /* Two lines, then clip. Long enough for a real feature request, short enough that
+     the conversation below it is still the main thing on screen. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.thead__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .thead__stats {
   display: flex;
-  gap: 0.9rem;
+  gap: 1.1rem;
   margin: 0;
+  flex: none;
 }
 
+/* Label above value. Side by side they read as one run-on string — "spend $0.0135
+   calls 3" — which is how the old header managed to be both cramped and vague. */
 .thead__stats > div {
-  display: flex;
-  align-items: baseline;
-  gap: 0.3rem;
+  display: grid;
+  gap: 0.05rem;
+  justify-items: end;
 }
 
 .thead__stats dt {
@@ -587,7 +726,7 @@
 }
 
 .chip--warn {
-  border-color: #3a3016;
+  border-color: transparent;
   background: var(--ws-warn-wash);
   color: var(--ws-warn);
 }
@@ -599,6 +738,7 @@
 }
 
 .thread__scroll {
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 1.25rem;
   scrollbar-width: thin;
@@ -669,10 +809,11 @@
  * the system does not have.
  */
 .act {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
   gap: 0.5rem;
-  padding-left: 0.1rem;
+  padding: 0.3rem 0.1rem;
   font-size: var(--ws-t-sm);
   color: var(--ws-muted);
 }
@@ -680,6 +821,7 @@
 .act__dot {
   width: 0.4rem;
   height: 0.4rem;
+  margin-block-start: 0.35rem;
   border-radius: 50%;
   background: var(--ws-line-strong);
   flex: none;
@@ -694,18 +836,28 @@
 }
 
 .act__text {
+  min-inline-size: 0;
   color: var(--ws-ink-soft);
 }
 
-.act__state {
+.act__by {
   color: var(--ws-faint);
-  font-size: var(--ws-t-xs);
+  /* Wraps rather than clipping. An account name is long and truncating it to
+     "orchestra…" told the reader nothing at all. */
+  overflow-wrap: anywhere;
 }
 
-.act__by {
-  margin-left: auto;
-  font-size: var(--ws-t-xs);
+.act__state {
+  display: inline-block;
+  margin-inline-start: 0.45rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--ws-line);
+  border-radius: 999px;
+  background: var(--ws-surface);
   color: var(--ws-faint);
+  font-size: var(--ws-t-xs);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 /* Artifact card -------------------------------------------------------- */
@@ -1584,4 +1736,97 @@
 
 .work__eviWrap[open] .work__evidence {
   white-space: pre-wrap;
+}
+
+/* ------------------------------------------------------- theme toggle */
+
+.themeBtn {
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  flex: none;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ws-r-sm);
+  background: none;
+  color: var(--ws-muted);
+  cursor: pointer;
+}
+
+.themeBtn svg {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+.themeBtn:hover {
+  border-color: var(--ws-line);
+  background: var(--ws-surface);
+  color: var(--ws-ink);
+}
+
+.themeBtn:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------------- content hash */
+
+.hashRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.9rem;
+  border-bottom: 1px solid var(--ws-line);
+  background: var(--ws-sunken);
+}
+
+.hashRow__label {
+  font-size: var(--ws-t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ws-faint);
+}
+
+.hashRow__value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.1rem 0.4rem;
+  margin-inline-start: -0.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--ws-r-sm);
+  background: none;
+  color: var(--ws-ink-soft);
+  font-family: var(--ws-mono);
+  font-size: var(--ws-t-xs);
+  cursor: pointer;
+}
+
+.hashRow__value:hover {
+  border-color: var(--ws-line);
+  background: var(--ws-raised);
+}
+
+.hashRow__value:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 1px;
+}
+
+.hashRow__ell {
+  color: var(--ws-faint);
+}
+
+.hashRow__state {
+  font-family: var(--ws-font);
+  font-size: var(--ws-t-xs);
+  color: var(--ws-faint);
+}
+
+.hashRow__value:hover .hashRow__state {
+  color: var(--ws-accent);
+}
+
+.hashRow__state.is-on {
+  color: var(--ws-ok);
 }

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { SpecMode, SpecState } from '@agentforge/contract';
 import { SignOutButton } from '@/components/workspace/sign-out';
+import { ThemeToggle } from '@/components/workspace/theme-toggle';
+import { labelFor, toneFor } from '@/components/workspace/status';
 
 /**
  * The thread rail.
@@ -48,7 +50,9 @@ export function Rail({
         {thread.awaiting && <span className="rail__pip" aria-hidden="true" />}
         {thread.title}
       </span>
-      <span className="rail__meta">{thread.status.toLowerCase().replace(/_/g, ' ')}</span>
+      <span className={`rail__meta rail__meta--${toneFor(thread.status)}`}>
+        {labelFor(thread.status)}
+      </span>
     </Link>
   );
 
@@ -88,6 +92,7 @@ export function Rail({
           <span className="rail__name">{user.name}</span>
           <span className="rail__role">{user.role}</span>
         </span>
+        <ThemeToggle />
         <SignOutButton />
       </div>
     </nav>
