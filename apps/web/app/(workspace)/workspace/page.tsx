@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
+import { getDb } from '@agentforge/db';
+import { listSpecs } from '@agentforge/orchestrator';
 import { Composer } from '@/components/workspace/composer';
+import { ExamplePrompts } from '@/components/workspace/example-prompts';
 
 export const metadata: Metadata = {
   title: 'New spec',
@@ -10,7 +13,14 @@ export const metadata: Metadata = {
  *
  * One question and one box. The examples below it are real shapes the pipeline handles
  * — including a Hinglish request, because the Requirement Agent accepts mixed-language
- * input and produces English documents, and that is worth showing rather than claiming.
+ * input and produces English documents, and that is worth showing rather than claiming —
+ * and choosing one fills the box.
+ *
+ * Someone with no specs yet also gets the three-step shape of what happens next. That is
+ * the part a first-time user cannot infer from a text box: the product's whole point is
+ * that documents stop at gates only a person can pass, and a user who does not know that
+ * reads the first approval screen as friction rather than as the feature. It disappears
+ * as soon as there is a thread, because after that it is clutter.
  */
 
 const EXAMPLES: readonly string[] = [
@@ -19,7 +29,25 @@ const EXAMPLES: readonly string[] = [
   'Humein chahiye ki har financial year ka apna gap-free invoice numbering series ho.',
 ];
 
+const STEPS: readonly { readonly title: string; readonly body: string }[] = [
+  {
+    title: 'Describe it',
+    body: 'Plain prose is fine. Choose “Existing repo” to have claims about your code checked against real files.',
+  },
+  {
+    title: 'Pass three gates',
+    body: 'Requirements, design and tasks each stop for you. Your approval binds to the exact document you read.',
+  },
+  {
+    title: 'Hand it to Claude Code',
+    body: 'Approving the tasks is what lets it edit files — and only after it has claimed one.',
+  },
+];
+
 export default function NewThreadPage() {
+  const firstRun =
+    listSpecs(getDb(), { status: null, mode: null, limit: 1, offset: 0 }).specs.length === 0;
+
   return (
     <main id="main" tabIndex={-1} className="stage">
       <div className="empty">
@@ -33,13 +61,23 @@ export default function NewThreadPage() {
 
           <Composer autoFocus />
 
-          <ul className="empty__examples">
-            {EXAMPLES.map((example) => (
-              <li className="empty__example" key={example}>
-                {example}
-              </li>
-            ))}
-          </ul>
+          <ExamplePrompts examples={EXAMPLES} />
+
+          {firstRun && (
+            <section className="steps" aria-labelledby="steps-h">
+              <h2 className="steps__title" id="steps-h">
+                How this works
+              </h2>
+              <ol className="steps__list">
+                {STEPS.map((step) => (
+                  <li className="steps__item" key={step.title}>
+                    <strong>{step.title}</strong>
+                    <span>{step.body}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </div>
       </div>
     </main>

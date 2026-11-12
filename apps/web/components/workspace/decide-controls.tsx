@@ -1,9 +1,11 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { ErrorNote } from '@/components/workspace/error-note';
+import { explainError, type ErrorExplanation } from '@/components/workspace/explain-error';
 import { announce, focusMain } from '@/components/workspace/announcer';
 import { useRouter } from 'next/navigation';
-import { AgentForgeError, createClient, type ApprovalDecision } from '@agentforge/contract';
+import { createClient, type ApprovalDecision } from '@agentforge/contract';
 
 /**
  * Recording a decision.
@@ -49,7 +51,7 @@ export function DecideControls({
 
   const [decision, setDecision] = useState<ApprovalDecision>('approve');
   const [comment, setComment] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorExplanation | null>(null);
   const [pending, setPending] = useState(false);
 
   const selected = DECISIONS.find((item) => item.value === decision);
@@ -77,19 +79,7 @@ export function DecideControls({
       // top of the page.
       window.setTimeout(focusMain, 0);
     } catch (caught) {
-      if (caught instanceof AgentForgeError) {
-        setError(
-          caught.code === 'HASH_MISMATCH'
-            ? 'This artifact changed since the pane was opened, so the decision was refused ' +
-                'and nothing moved. Reload and read the current version before deciding.'
-            : caught.code === 'VERSION_CONFLICT'
-              ? 'Someone else moved this spec while the pane was open. Reload to see where ' +
-                'it got to.'
-              : caught.message,
-        );
-      } else {
-        setError('The decision could not be recorded. Nothing was changed.');
-      }
+      setError(explainError(caught, 'The decision could not be recorded. Nothing was changed.'));
       setPending(false);
     }
   }
@@ -131,9 +121,13 @@ export function DecideControls({
       />
 
       {error !== null && (
-        <p className="decide__error" role="alert">
-          {error}
-        </p>
+        <ErrorNote
+          className="decide__error"
+          error={error}
+          onRetry={() => {
+            void submit();
+          }}
+        />
       )}
 
       <button

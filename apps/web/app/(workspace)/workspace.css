@@ -2128,3 +2128,238 @@
     align-content: start;
   }
 }
+
+/* ============================================================== empty + error states */
+
+/* ---- example prompts: real buttons now -------------------------------------- */
+
+.empty__examples {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button.empty__example {
+  inline-size: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ws-line);
+  border-radius: var(--ws-r);
+  background: var(--ws-surface);
+  color: var(--ws-ink-soft);
+  font: inherit;
+  font-size: var(--ws-t-sm);
+  line-height: 1.5;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+button.empty__example:hover {
+  border-color: var(--ws-line-strong);
+  background: var(--ws-raised);
+  color: var(--ws-ink);
+}
+
+button.empty__example:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 2px;
+}
+
+/* ---- first run: what happens next ------------------------------------------- */
+
+.steps {
+  margin-block-start: 0.6rem;
+  padding-block-start: 1rem;
+  border-top: 1px solid var(--ws-line);
+}
+
+.steps__title {
+  margin: 0 0 0.6rem;
+  font-size: var(--ws-t-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-muted);
+}
+
+.steps__list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps__item {
+  position: relative;
+  display: grid;
+  gap: 0.15rem;
+  padding-inline-start: 2rem;
+  font-size: var(--ws-t-sm);
+  color: var(--ws-muted);
+  counter-increment: step;
+}
+
+.steps__item::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.05rem;
+  display: grid;
+  place-items: center;
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+  border-radius: 50%;
+  background: var(--ws-accent-wash);
+  color: var(--ws-accent);
+  font-size: var(--ws-t-xs);
+  font-weight: 600;
+}
+
+.steps__item strong {
+  color: var(--ws-ink);
+  font-weight: 600;
+}
+
+/* ---- the thread list when there is nothing in it ---------------------------- */
+
+.rail__empty {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0.25rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--ws-line-strong);
+  border-radius: var(--ws-r);
+}
+
+.rail__emptyTitle {
+  margin: 0;
+  font-size: var(--ws-t-sm);
+  font-weight: 600;
+  color: var(--ws-ink-soft);
+}
+
+.rail__emptyBody {
+  margin: 0;
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+}
+
+/* ---- not found / error screens ---------------------------------------------- */
+
+.empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-block-start: 0.4rem;
+}
+
+.empty__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 36px;
+  padding: 0 1rem;
+  text-decoration: none;
+}
+
+/* ---- a failure with a way out ----------------------------------------------- */
+
+.errnote {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.errnote__msg {
+  margin: 0;
+}
+
+.errnote__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.errnote__btn {
+  min-block-size: 30px;
+  padding: 0 0.8rem;
+  border: 1px solid currentColor;
+  border-radius: var(--ws-r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--ws-t-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.errnote__btn:hover {
+  background: var(--ws-fail-wash);
+}
+
+.errnote__btn:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 2px;
+}
+
+.errnote__ref {
+  margin: 0;
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+}
+
+.errnote__ref code {
+  font-family: var(--ws-mono);
+}
+
+/* ---- loading skeleton -------------------------------------------------------- */
+
+.skel {
+  border-radius: var(--ws-r);
+  background: linear-gradient(
+    90deg,
+    var(--ws-surface) 0%,
+    var(--ws-line) 50%,
+    var(--ws-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.4s ease-in-out infinite;
+}
+
+.skel--title {
+  inline-size: min(28rem, 70%);
+  block-size: 1.1rem;
+}
+
+.skel--chips {
+  inline-size: 9rem;
+  block-size: 1.3rem;
+}
+
+.skel--card {
+  block-size: 5.5rem;
+}
+
+.skel--line {
+  block-size: 0.8rem;
+  inline-size: 60%;
+}
+
+.skel--short {
+  inline-size: 35%;
+}
+
+@keyframes skel-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

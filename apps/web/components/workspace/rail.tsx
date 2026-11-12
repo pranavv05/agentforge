@@ -70,7 +70,14 @@ export function Rail({
       </div>
 
       <div className="rail__list">
-        {threads.length === 0 && <p className="rail__section">No threads yet</p>}
+        {threads.length === 0 && (
+          <div className="rail__empty">
+            <p className="rail__emptyTitle">Nothing here yet</p>
+            <p className="rail__emptyBody">
+              Every spec you start appears here, with a dot when it is waiting on you.
+            </p>
+          </div>
+        )}
 
         {waiting.length > 0 && (
           <>

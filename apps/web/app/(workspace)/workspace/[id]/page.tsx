@@ -40,7 +40,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const spec = getSpec(getDb(), id);
-  return { title: spec?.title ?? 'Thread' };
+  // A missing spec renders the not-found screen, so the tab should say so rather than
+  // calling an error page "Thread".
+  return { title: spec?.title ?? 'Spec not found' };
 }
 
 export default async function ThreadPage({

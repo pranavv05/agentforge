@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { ErrorNote } from '@/components/workspace/error-note';
+import { explainError, type ErrorExplanation } from '@/components/workspace/explain-error';
 import { useRouter } from 'next/navigation';
-import { AgentForgeError, createClient, type SpecState } from '@agentforge/contract';
+import { createClient, type SpecState } from '@agentforge/contract';
 
 /**
  * The action bar.
@@ -147,7 +149,7 @@ export function ThreadFooter({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorExplanation | null>(null);
 
   const action = actionFor(status, mode);
 
@@ -161,13 +163,7 @@ export function ThreadFooter({
       await action.run(specId, specVersion);
       router.refresh();
     } catch (caught) {
-      setError(
-        caught instanceof AgentForgeError
-          ? caught.code === 'VERSION_CONFLICT'
-            ? 'This spec moved while the page was open. Reload to see where it got to.'
-            : caught.message
-          : 'That step could not be run.',
-      );
+      setError(explainError(caught, 'That step could not be run.'));
     } finally {
       setPending(false);
     }
@@ -198,9 +194,13 @@ export function ThreadFooter({
       )}
 
       {error !== null && (
-        <p className="tfoot__error" role="alert">
-          {error}
-        </p>
+        <ErrorNote
+          className="tfoot__error"
+          error={error}
+          onRetry={() => {
+            void run();
+          }}
+        />
       )}
     </footer>
   );

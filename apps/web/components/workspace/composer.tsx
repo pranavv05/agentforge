@@ -1,8 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { PREFILL_EVENT } from '@/components/workspace/example-prompts';
+import { ErrorNote } from '@/components/workspace/error-note';
+import { explainError, type ErrorExplanation } from '@/components/workspace/explain-error';
 import { useRouter } from 'next/navigation';
-import { AgentForgeError, createClient, type SpecMode } from '@agentforge/contract';
+import { createClient, type SpecMode } from '@agentforge/contract';
 
 /**
  * The composer.
@@ -39,8 +42,28 @@ export function Composer({ autoFocus = false }: { autoFocus?: boolean }) {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<SpecMode>('greenfield');
   const [repoPath, setRepoPath] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorExplanation | null>(null);
   const [pending, setPending] = useState(false);
+
+  // An example prompt was chosen: put it in the box and put the cursor at the end, so the
+  // user can edit it rather than having to select and retype.
+  useEffect(() => {
+    const onPrefill = (event: Event): void => {
+      if (!(event instanceof CustomEvent) || typeof event.detail !== 'string') return;
+      setText(event.detail);
+      const box = textareaRef.current;
+      if (box === null) return;
+      box.focus();
+      window.setTimeout(() => {
+        box.setSelectionRange(box.value.length, box.value.length);
+      }, 0);
+    };
+
+    window.addEventListener(PREFILL_EVENT, onPrefill);
+    return () => {
+      window.removeEventListener(PREFILL_EVENT, onPrefill);
+    };
+  }, []);
 
   const ready = text.trim().length >= 20 && (mode === 'greenfield' || repoPath.trim().length > 0);
 
@@ -61,11 +84,7 @@ export function Composer({ autoFocus = false }: { autoFocus?: boolean }) {
       router.refresh();
       router.push(`/workspace/${result.spec.id}`);
     } catch (caught) {
-      setError(
-        caught instanceof AgentForgeError
-          ? caught.message
-          : 'The spec could not be created. Nothing was saved.',
-      );
+      setError(explainError(caught, 'The spec could not be created. Nothing was saved.'));
       setPending(false);
     }
   }
@@ -156,9 +175,13 @@ export function Composer({ autoFocus = false }: { autoFocus?: boolean }) {
       </div>
 
       {error !== null && (
-        <p className="composer__error" role="alert">
-          {error}
-        </p>
+        <ErrorNote
+          className="composer__error"
+          error={error}
+          onRetry={() => {
+            void submit();
+          }}
+        />
       )}
     </form>
   );

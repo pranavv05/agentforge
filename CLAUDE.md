@@ -332,6 +332,19 @@ focus restoration after a decision, which needs a real approval to exercise. A b
 audit cannot run in CI here, so `apps/web/test/a11y.test.ts` pins the structural
 decisions only — it does not and cannot assert contrast or focus behaviour.
 
+**Empty and failure states exist now, and some were only exercised statically.** The
+workspace had no `loading`, `error` or `not-found` file at all, and four components
+each translated errors their own way (mostly by showing the raw server message). Now one
+function, `explainError`, branches on the error *code* and says what happened, whether
+anything changed, and what to do; a first-run user sees the three-gate flow explained; the
+example prompts are real buttons. Exercised live: the validation-error path (a real
+`VALIDATION_FAILED`, with the correlation reference shown and no spec created), the
+in-workspace not-found screen, and example-fills-composer. **Not exercised live:** the
+error boundary (rendered statically and asserted, never actually thrown in a browser), the
+loading skeleton (too fast to observe), the first-run view (verified by injecting its
+markup, because the dev database has threads), and the Reload / Try again / Sign in
+buttons on a failure — only their translation logic is tested.
+
 **Phone layout is designed, and verified only in emulation.** Below 54rem the thread rail
 becomes a drawer behind a top bar, the document becomes a sheet with a labelled way back,
 and touch targets are 44px. Checked in a real browser at 390px against the live pages:

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { ErrorNote } from '@/components/workspace/error-note';
+import { explainError, type ErrorExplanation } from '@/components/workspace/explain-error';
 import { useRouter } from 'next/navigation';
-import { AgentForgeError, createClient } from '@agentforge/contract';
+import { createClient } from '@agentforge/contract';
 
 /**
  * Answering a clarification, in the thread.
@@ -39,7 +41,7 @@ export function AnswerInline({
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorExplanation | null>(null);
   const [pending, setPending] = useState(false);
 
   const complete = questions.every((q) => (answers[q.id] ?? '').trim().length > 0);
@@ -61,13 +63,7 @@ export function AnswerInline({
 
       router.refresh();
     } catch (caught) {
-      setError(
-        caught instanceof AgentForgeError
-          ? caught.code === 'VERSION_CONFLICT'
-            ? 'This spec moved while the page was open. Reload to see where it got to.'
-            : caught.message
-          : 'The answers could not be recorded. Nothing was changed.',
-      );
+      setError(explainError(caught, 'The answers could not be recorded. Nothing was changed.'));
       setPending(false);
     }
   }
@@ -119,9 +115,13 @@ export function AnswerInline({
       ))}
 
       {error !== null && (
-        <p className="ans__error" role="alert">
-          {error}
-        </p>
+        <ErrorNote
+          className="ans__error"
+          error={error}
+          onRetry={() => {
+            void submit();
+          }}
+        />
       )}
 
       <button className="ans__go" type="submit" disabled={!complete || pending}>
