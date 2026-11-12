@@ -69,8 +69,8 @@ actually completed.
 | GET | `/api/specs/:id/stream` | Server-sent events for a run in progress |
 
 `context/scan` also takes `strategy`, one of `grep`, `repomap`, `fts` or `fts_repomap`.
-The contract names a fifth, `fts_repomap_embed`; it is **not implemented** and is refused
-rather than silently served by a different retriever.
+These are the same four arms the retrieval ablation compares. An unknown strategy is
+rejected with `VALIDATION_FAILED` before anything is written.
 
 ## Artifacts and decisions
 

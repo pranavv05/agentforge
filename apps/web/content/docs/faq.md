@@ -80,8 +80,6 @@ the task.
 ## What is not finished?
 
 - The compliance pack has not been reviewed by a tax professional.
-- The `fts_repomap_embed` strategy is named by the contract but not implemented; it is
-  refused rather than silently served by a different retriever.
 - The ablation compares *retrieval* deterministically. Running the full agentic loop per
   arm per commit would measure the system as used, but costs money per run and varies
   between runs, so the deterministic figures are the ones with a spread behind them.

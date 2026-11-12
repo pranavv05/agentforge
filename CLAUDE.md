@@ -307,10 +307,14 @@ varies between runs, so it would cover a handful of commits at best. The determi
 figures are the ones with a spread behind them, and the report should not present them as
 the other thing.
 
-**The `fts_repomap_embed` arm is named by the frozen contract but not implemented.** The
-plan listed a local-embedding arm as an optional stretch. `scanContext` refuses it rather
-than silently serving the `fts_repomap` tools under its name, which would put a row in the
-results table that was never measured.
+**The `fts_repomap_embed` arm has been removed from the contract.** It was the plan's
+optional local-embedding arm; it was named in the frozen contract but never implemented,
+and `scanContext` refused it at runtime — a promise nothing kept. It is gone from the
+contract, the agent, the tests and the docs, and the request schema now rejects it like any
+unknown value. The agentic strategies are `grep`, `repomap`, `fts` and `fts_repomap`, the
+same four arms as the deterministic ablation. `fts` (the index without the repo map) was
+added at the same time, because the agentic table could not otherwise have the four rows
+the deterministic one has.
 
 **Prompt quality is tested against a real model only for the paths the smoke scripts
 cover** — greenfield requirements and design, and a brownfield scan. The Task Agent and

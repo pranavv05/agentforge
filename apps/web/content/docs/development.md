@@ -157,8 +157,6 @@ criteria — including a plain statement of which tests it could not run.
   deterministically over 15 commits per repository. Running the full loop per arm per
   commit would measure the system as used, but costs money per run and varies between
   runs.
-- **`fts_repomap_embed` is named by the contract but not implemented**, and is refused
-  rather than silently served by a different retriever.
 - **Two fixture repositories were used where three were planned.**
 - **The edit hook has a stated scope.** It governs sessions pinned to a spec and guards
   against a capable model drifting off-spec, not an adversary with shell access. Whether

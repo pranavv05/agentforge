@@ -68,6 +68,7 @@ export {
   RETRIEVAL_STRATEGIES,
   renderContext,
   scanContext,
+  toolsFor,
   type RetrievalStrategy,
   type ScanContextInput,
   type ScanContextResult,

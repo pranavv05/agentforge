@@ -83,7 +83,7 @@ export interface ScanContextResult {
 }
 
 /** The tools each strategy exposes, so an ablation is a real difference in capability. */
-function toolsFor(strategy: RetrievalStrategy): readonly (typeof CONTEXT_TOOLS)[number][] {
+export function toolsFor(strategy: RetrievalStrategy): readonly (typeof CONTEXT_TOOLS)[number][] {
   const byName = new Map(CONTEXT_TOOLS.map((tool) => [tool.name, tool]));
   const pick = (names: readonly string[]) =>
     names.map((name) => {
@@ -98,17 +98,12 @@ function toolsFor(strategy: RetrievalStrategy): readonly (typeof CONTEXT_TOOLS)[
       return pick(['grep', 'read_file', 'list_dir']);
     case 'repomap':
       return pick(['repo_map', 'grep', 'read_file', 'list_dir']);
+    // The full-text index without the repo map: isolates what the index is worth on its
+    // own, which is the question the deterministic ablation asks for the same arm.
+    case 'fts':
+      return pick(['fts_search', 'grep', 'read_file', 'list_dir']);
     case 'fts_repomap':
       return pick(['repo_map', 'fts_search', 'grep', 'read_file', 'list_dir']);
-    case 'fts_repomap_embed':
-      // The contract names this arm because the plan listed it as an optional fourth
-      // ablation. No embedding index is built, and silently serving the fts_repomap
-      // tools under this name would put a fabricated arm in the results table.
-      throw new ValidationError(
-        'the fts_repomap_embed arm is not implemented: no embedding index is built, and ' +
-          'running it as fts_repomap would report an arm that was never measured',
-        { strategy },
-      );
   }
 }
 

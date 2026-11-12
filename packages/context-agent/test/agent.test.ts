@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AgentForgeError } from '@agentforge/contract';
 import { createDb, type Db } from '@agentforge/db';
 import {
   createSpec,
@@ -15,7 +14,7 @@ import {
   type Actor,
 } from '@agentforge/orchestrator';
 import { installStub, type Stub } from '../../llm/test/stub.ts';
-import { scanContext } from '../src/index.ts';
+import { RETRIEVAL_STRATEGIES, scanContext, toolsFor } from '../src/index.ts';
 import { SAMPLE_REPO, makeFixture, type Fixture } from './fixtures.ts';
 
 /**
@@ -305,22 +304,36 @@ describe('retrieval strategies', () => {
     ]);
   });
 
-  it('refuses the embedding arm rather than silently running a different one', async () => {
-    // The contract names this arm because it was planned; it is not implemented. Serving
-    // the fts_repomap tools under its name would put an arm in the results table that
-    // was never measured.
-    try {
-      await scanContext(db, {
-        specId,
-        idempotencyKey: 'scan-embed',
-        strategy: 'fts_repomap_embed',
-        skipModuleSummaries: true,
-      });
-      throw new Error('expected the embedding arm to be refused');
-    } catch (error) {
-      expect((error as AgentForgeError).code).toBe('VALIDATION_FAILED');
-      expect((error as Error).message).toContain('not implemented');
+  it('gives the index arm the index but not the map', async () => {
+    // The fourth arm. It exists so the agentic table has the same four rows as the
+    // deterministic one, and it is only a real arm if it differs from its neighbours:
+    // fts_repomap minus the map, not fts_repomap under another label.
+    queueRun([GOOD_CLAIM]);
+    await scanContext(db, {
+      specId,
+      idempotencyKey: 'scan-fts',
+      strategy: 'fts',
+      skipModuleSummaries: true,
+    });
+
+    expect(stub.calls[0]?.toolNames).toEqual(['fts_search', 'grep', 'read_file', 'list_dir']);
+    const prompt = (stub.calls[0]?.system ?? []).map((block) => block.text).join('\n');
+    expect(prompt).not.toContain('repo-map');
+  });
+
+  it('no longer names an arm that was never implemented', () => {
+    // fts_repomap_embed sat in the frozen contract as a promise nothing kept: the agent
+    // refused it at runtime. Removed, so every name the contract offers is one that runs.
+    expect([...RETRIEVAL_STRATEGIES]).toEqual(['grep', 'repomap', 'fts', 'fts_repomap']);
+    expect(RETRIEVAL_STRATEGIES).not.toContain('fts_repomap_embed');
+  });
+
+  it('gives every strategy a different tool set, so no arm is only a label', () => {
+    const sets = new Set<string>();
+    for (const strategy of RETRIEVAL_STRATEGIES) {
+      sets.add(JSON.stringify(toolsFor(strategy).map((tool) => tool.name)));
     }
+    expect(sets.size).toBe(RETRIEVAL_STRATEGIES.length);
   });
 });
 

@@ -192,16 +192,16 @@ export const APPROVAL_STATE_FOR_ARTIFACT = {
  * tool selection and the eval harness's arms all read from this list, so the arms the
  * API accepts cannot drift from the arms the code implements.
  *
- * `fts_repomap_embed` is the optional fourth ablation the plan described. It is named
- * because the contract is frozen and removing it would be a breaking change; it is not
- * implemented, and the agent refuses it rather than quietly serving a different arm
- * under its name.
+ * These are the same four arms the deterministic retrieval ablation compares
+ * (`DETERMINISTIC_ARMS` in the eval package), one for one, so the agentic table and the
+ * deterministic table can be read side by side.
+ *
+ * A fifth, `fts_repomap_embed`, used to be named here. It was the plan's optional
+ * local-embedding arm; it was never implemented, and the agent refused it rather than
+ * quietly serving a different arm under its name. It has been removed: a name in a frozen
+ * contract is a promise, and an arm that cannot run is a promise nothing keeps. The plan
+ * itself called it optional, and ruled out hosted embedding services.
  */
-export const RETRIEVAL_STRATEGY_NAMES = [
-  'grep',
-  'repomap',
-  'fts_repomap',
-  'fts_repomap_embed',
-] as const;
+export const RETRIEVAL_STRATEGY_NAMES = ['grep', 'repomap', 'fts', 'fts_repomap'] as const;
 
 export type RetrievalStrategyName = (typeof RETRIEVAL_STRATEGY_NAMES)[number];

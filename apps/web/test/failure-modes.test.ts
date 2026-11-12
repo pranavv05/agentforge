@@ -187,8 +187,11 @@ describe('a repository path that is wrong', () => {
     }
   });
 
-  it('refuses the embedding arm instead of quietly running a different one', async () => {
-    const id = newSpec('Embed arm', 'brownfield', dir);
+  it('rejects a retrieval strategy the contract no longer names', async () => {
+    // fts_repomap_embed used to be accepted by the schema and refused later by the agent.
+    // It is gone from the contract, so it is refused at the boundary like any unknown
+    // value — before a spec row is touched.
+    const id = newSpec('Removed arm', 'brownfield', dir);
 
     const payload = await body(
       await contextScan.POST(
