@@ -9,6 +9,7 @@ import {
   applicableRules,
   buildTraceMatrix,
   detectSupersededTerms,
+  ensurePackInstalled,
   installedPackVersion,
 } from '@agentforge/compliance';
 import { getHeadArtifact, requireSpecById } from '@agentforge/orchestrator';
@@ -35,6 +36,10 @@ export function GET(
     const db = getDb();
     const spec = requireSpecById(db, id);
 
+    // Idempotent and cheap when current. A trace over an uninstalled pack is not "no rules
+    // apply", it is "nothing was checked", and returning an empty matrix as though it were
+    // the former is the failure this guards against.
+    ensurePackInstalled(db);
     const packVersion = installedPackVersion(db);
 
     /** Reads and validates one artifact payload, or null when it does not exist yet. */

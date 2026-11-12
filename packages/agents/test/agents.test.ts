@@ -640,6 +640,60 @@ describe('Design Agent', () => {
     );
   });
 
+  it('refuses a design that cites Section 194J as if it were current law', async () => {
+    // The Design Agent's compliance refusal had no test at all: the path that threw
+    // ComplianceViolationError was only ever reached by a live model.
+    const specId = await specInDesignDrafting();
+    stub.reply({
+      output: {
+        ...DESIGN_OUTPUT,
+        sections: [
+          {
+            ...DESIGN_OUTPUT.sections[0],
+            body: 'Deduct TDS on the payment under Section 194J at the configured rate.',
+          },
+        ],
+      },
+    });
+
+    try {
+      await draftDesign(db, { specId, idempotencyKey: 'd' });
+      throw new Error('expected the compliance guard to refuse');
+    } catch (error) {
+      const e = error as AgentForgeError;
+      expect(e.code).toBe('COMPLIANCE_VIOLATION');
+      expect(e.message).toContain('Section 393');
+    }
+
+    // Refused before anything was written: a design with wrong law never becomes a document.
+    expect(listArtifactVersions(db, specId, 'design')).toHaveLength(0);
+  });
+
+  it('accepts a design that names Section 194J only to reject it', async () => {
+    // What two live models wrote, and were refused for. The pack's own acceptance criterion
+    // requires a deduction configured against Section 194J to be rejected, so a correct
+    // design has to say so in words.
+    const specId = await specInDesignDrafting();
+    stub.reply({
+      output: {
+        ...DESIGN_OUTPUT,
+        sections: [
+          {
+            ...DESIGN_OUTPUT.sections[0],
+            body:
+              'A deduction configured against Section 194J is rejected and the equivalent ' +
+              'Section 393 row is named in the error.',
+          },
+        ],
+      },
+    });
+
+    const result = await draftDesign(db, { specId, idempotencyKey: 'd' });
+
+    expect(result.spec.status).toBe('DESIGN_AWAITING_APPROVAL');
+    expect(listArtifactVersions(db, specId, 'design')).toHaveLength(1);
+  });
+
   it('refuses to draft outside DESIGN_DRAFTING', async () => {
     const specId = specInDrafting();
     try {

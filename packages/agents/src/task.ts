@@ -12,6 +12,7 @@ import {
   applicableRules,
   buildTraceMatrix,
   detectSupersededTerms,
+  ensurePackInstalled,
   installedPackVersion,
   saveTraces,
 } from '@agentforge/compliance';
@@ -305,6 +306,11 @@ export async function generateTasks(
       : current;
 
   // The trace matrix can only be complete once tasks exist, so it is computed here.
+  //
+  // The pack is installed first. Without this a database that was migrated but never
+  // seeded had no pack, `installedPackVersion` was undefined, and the whole trace was
+  // skipped without a word.
+  ensurePackInstalled(db);
   const packVersion = installedPackVersion(db);
   if (packVersion !== undefined) {
     const rules = applicableRules({

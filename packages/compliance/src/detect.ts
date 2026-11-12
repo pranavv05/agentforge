@@ -72,6 +72,67 @@ function detectors(): readonly Detector[] {
   return cached;
 }
 
+/**
+ * Whether a mention of a dissolved section is *about* its being dissolved.
+ *
+ * The guard used to block any text containing "Section 194J". That produced a
+ * contradiction a stub could never show and a live model hit on its first real run: the
+ * pack's own acceptance criterion says a deduction configured against Section 194J must be
+ * rejected and the Section 393 equivalent named — so every correct design has to *write
+ * the words* "Section 194J" — and the lint then refused every correct design. Two live runs,
+ * on two different models, were refused for exactly that.
+ *
+ * Citing a dissolved section as current law and naming it as the thing being rejected are
+ * different acts, and only the first is wrong law. The distinction is drawn per sentence:
+ * a mention is accepted when *its own sentence* either names the replacement (Section 393)
+ * or says the section is rejected, legacy or superseded.
+ *
+ * Deliberately per sentence, not per paragraph. A neighbouring sentence that happens to
+ * mention Section 393 must not excuse a bare "deduct under Section 194J" next to it, and a
+ * wider window would let it.
+ *
+ * It is a heuristic, and the limits are known rather than hidden. A sentence written to
+ * pass it — "Section 194J applies (see Section 393)" — will pass. That is accepted because
+ * the human approval gate is still the control, and because the alternative was blocking
+ * correct work. A match that qualifies is therefore not dropped: it is reported as
+ * `advisory`, so the reviewer still sees it in the trace, just without it stopping the
+ * design.
+ */
+const NAMES_REPLACEMENT = /\b393\b/;
+const SAYS_LEGACY =
+  /\b(reject\w*|legacy|no longer|superseded|dissolved|replaced?|replaces|replacement|formerly|repealed|obsolete|deprecated|equivalent|stale|migrat\w*|1961)\b/i;
+
+/** The sentence (or line) containing a match: bounded by a newline, or ". ", "! ", "? ". */
+function sentenceAround(text: string, start: number, end: number): string {
+  let from = start;
+  while (from > 0) {
+    const previous = text[from - 1] ?? '';
+    if (previous === '\n') break;
+    // A space straight after sentence-ending punctuation is the start of a new sentence.
+    if ((previous === ' ' || previous === '\t') && /[.!?]/.test(text[from - 2] ?? '')) break;
+    from -= 1;
+  }
+
+  let to = end;
+  while (to < text.length) {
+    const current = text[to] ?? '';
+    if (current === '\n') break;
+    if (/[.!?]/.test(current) && (to + 1 >= text.length || /\s/.test(text[to + 1] ?? ''))) {
+      to += 1;
+      break;
+    }
+    to += 1;
+  }
+
+  return text.slice(from, to);
+}
+
+/** Whether the mention at [start, end) is named as legacy or rejected, not cited as law. */
+export function isMappingMention(text: string, start: number, end: number): boolean {
+  const sentence = sentenceAround(text, start, end);
+  return NAMES_REPLACEMENT.test(sentence) || SAYS_LEGACY.test(sentence);
+}
+
 /** One named piece of text to scan, with the location to report it under. */
 export interface ScanTarget {
   /** Where this text sits in the artifact, e.g. `design.sections[2].body`. */
@@ -116,13 +177,20 @@ export function detectSupersededTerms(
         const overlaps = claimed.some((r) => start < r.end && end > r.start);
         if (!overlaps) {
           claimed.push({ start, end });
+
+          const mapping = isMappingMention(target.text, start, end);
+
           violations.push({
             rule_key: detector.ruleKey,
-            severity: detector.severity,
+            // Downgraded, not dropped: it still appears in the trace for the reviewer.
+            severity: mapping ? 'advisory' : detector.severity,
             location: target.location,
             matched_text: match[0],
             replacement: detector.replacement,
-            explanation: detector.explanation,
+            explanation: mapping
+              ? 'Named as legacy or rejected, not cited as current law, so it does not block. ' +
+                detector.explanation
+              : detector.explanation,
           });
         }
       }

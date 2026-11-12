@@ -633,6 +633,13 @@ describe('POST /api/specs/:id/tasks/generate', () => {
     const specId = await specWithApprovedDesign('Tasks happy path');
     expect(getSpec(getDb(), specId)?.status).toBe('DESIGN_APPROVED');
 
+    // This database has never run the seed, like a real install: db:migrate, not db:seed.
+    // The pack used to be installed only by the seed, so the Task Agent found none, skipped
+    // the trace, and nothing said so. (First test in the file to reach this agent, so
+    // nothing earlier can have installed it.)
+    const compliance = await import('@agentforge/compliance');
+    expect(compliance.installedPackVersion(getDb())).toBeUndefined();
+
     stub.reply({ output: TASKS_OUTPUT });
 
     const parsed = contract.DraftArtifactResponseSchema.parse(
@@ -648,6 +655,10 @@ describe('POST /api/specs/:id/tasks/generate', () => {
     expect(parsed.spec.status).toBe('TASKS_GENERATED');
     expect(parsed.artifact?.kind).toBe('tasks');
     expect(parsed.artifact?.content_md).toContain('TASK-001');
+
+    // Generating tasks installed the pack, so the trace could be computed rather than
+    // skipped without a word.
+    expect(compliance.installedPackVersion(getDb())).toBe(compliance.PACK_VERSION);
   });
 
   it('refuses before the design is approved', async () => {

@@ -316,10 +316,36 @@ same four arms as the deterministic ablation. `fts` (the index without the repo 
 added at the same time, because the agentic table could not otherwise have the four rows
 the deterministic one has.
 
-**Prompt quality is tested against a real model only for the paths the smoke scripts
-cover** — greenfield requirements and design, and a brownfield scan. The Task Agent and
-the compliance injector have been exercised offline against the stub, which runs every
-line of the production path except the HTTP call, but not yet live.
+**The Task Agent and the compliance pack have now run live, and the run found two real
+defects and one open limit.** `npm run sdd:smoke:tasks` drives a scratch database (approvals
+recorded as a test reviewer, never a real account) through requirements, design and tasks on
+Sonnet 5.5. Total spend across all attempts was about $0.37 (a Haiku run $0.015, a Sonnet run
+that was refused $0.27, the live Task Agent call $0.081, 25 s). The Task Agent produced 8
+tasks that passed every one of its own checks — no unknown ids, no dependency cycle, every
+acceptance criterion verified — and zero transitions were caused by an agent.
+
+- **Defect 1, fixed: the guard and the pack contradicted each other.** The pack's own criterion
+  says a deduction against Section 194J must be rejected and the 393 equivalent named, so every
+  correct design must write "Section 194J"; the lint blocked any text containing it. Two live
+  runs, on two models, produced correct designs and were refused. A stub could never show this.
+  The guard is now sentence-aware: a mention is accepted (reported as `advisory`, still visible
+  in the trace) when its own sentence names Section 393 or says the section is rejected, legacy
+  or superseded; a bare "deduct under Section 194J" still blocks. **It is a heuristic and a
+  sentence written to pass it will** ("Section 194J applies (see Section 393)"); the human
+  approval gate is the real control, and a test asserts this limit rather than hiding it.
+- **Defect 2, fixed: a fresh install had no compliance pack.** `loadPack` had one caller outside
+  tests, `scripts/seed.ts`, and a real install runs `db:migrate`, not the seed. The Task Agent
+  silently skipped the trace and the trace route returned no rules, so traceability quietly did
+  not exist. `ensurePackInstalled` now runs at server start and wherever the pack is consumed.
+- **Open limit: rule applicability is a bare keyword match and over-fires.** The word "invoice"
+  in a vendor-payment requirement fired every GST rule, and every TDS rule lists "tds" as a
+  trigger, so 14 of 15 rules "applied" to a single-category TDS feature. The trace's coverage
+  figure (43% on that run) and its "written down but never designed" list therefore overstate
+  the gaps. Not changed: how applicability should be decided is a policy choice.
+
+The requirements and design stages of the final run were **replayed from recordings of the
+earlier live Sonnet run**, not re-run; the script says so. Only the Task Agent call was live
+in that run. The compliance pack has still not been reviewed by a tax professional.
 
 **Accessibility was audited with axe-core in a real browser, and fixed — with stated residuals.**
 It ran against the workspace (new spec, thread, requirements, tasks, context) in both

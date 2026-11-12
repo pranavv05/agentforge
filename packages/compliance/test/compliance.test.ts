@@ -20,6 +20,7 @@ import {
   buildTraceMatrix,
   compileDetectors,
   detectSupersededTerms,
+  ensurePackInstalled,
   injectCriteria,
   installedPackVersion,
   loadPack,
@@ -219,6 +220,96 @@ describe('superseded-term detection', () => {
     const violations = scan('Section 194J applies.');
     expect(blockingViolations(violations)).toHaveLength(1);
     expect(blockingViolations([])).toEqual([]);
+  });
+});
+
+describe('a mention that is about the section being dissolved', () => {
+  /*
+   * Found by running the pipeline against a live model, which no stub could have done.
+   *
+   * The pack's own acceptance criterion says a deduction configured against Section 194J
+   * must be rejected and the Section 393 equivalent named, so every correct design has to
+   * write the words "Section 194J". The guard blocked any text containing them. Two live
+   * runs on two different models — Haiku and Sonnet — produced correct designs and were
+   * refused for exactly that. The sentences below are the ones those models actually wrote.
+   */
+  const scan = (text: string) => detectSupersededTerms([{ location: 'design.body', text }]);
+  const blocking = (text: string) => blockingViolations(scan(text));
+
+  it.each([
+    // Sonnet 5.5, design section "Section 393 row registry and legacy 194-series rejection".
+    'The row list comes from the legacy_equivalent_of mapping, so a deduction configured against Section 194J is rejected and the equivalent row is named (AC-010).',
+    // Haiku 5.5, design section "TDS rate configuration and rejection of 194-series citations".
+    'The validator returns an error that names the Section 393 professional-services row as the equivalent of Section 194J (REQ-001, TDS-001 AC-001).',
+  ])('does not block what the live models actually wrote: %s', (sentence) => {
+    expect(blocking(sentence)).toEqual([]);
+    // But it is still *seen*: a reviewer looking at the trace should not lose it.
+    expect(scan(sentence).length).toBeGreaterThan(0);
+  });
+
+  it('reports a qualifying mention as advisory, not as nothing', () => {
+    const [violation] = scan('A deduction configured against Section 194J is rejected.');
+
+    expect(violation?.severity).toBe('advisory');
+    expect(violation?.explanation).toContain('does not block');
+    expect(violation?.matched_text).toBe('Section 194J');
+  });
+
+  it('accepts a sentence that names Section 393 as the replacement', () => {
+    expect(blocking('Section 194J is now Section 393 in the Income-tax Act 2025.')).toEqual([]);
+  });
+
+  it('accepts a sentence that says the section is legacy, dissolved or superseded', () => {
+    for (const sentence of [
+      'Section 194J is a legacy provision and is not used.',
+      'Section 194J no longer exists.',
+      'Section 194J was dissolved by the 2025 Act.',
+      'Section 194J has been superseded.',
+    ]) {
+      expect(blocking(sentence), sentence).toEqual([]);
+    }
+  });
+
+  it('still blocks a bare citation, which is the whole point of the guard', () => {
+    for (const sentence of [
+      'Deduct TDS under Section 194J for consultant invoices.',
+      'Section 194J applies to professional fees.',
+      'The rate is set by Section 194J.',
+    ]) {
+      expect(blocking(sentence).length, sentence).toBe(1);
+    }
+  });
+
+  it('does not let a neighbouring sentence excuse a bare citation', () => {
+    // The reason the rule is per sentence and not per paragraph. A wider window would let
+    // an unrelated mention of Section 393 two sentences away launder a wrong citation.
+    expect(
+      blocking('Deduct TDS under Section 194J. The Section 393 table is described elsewhere.'),
+    ).toHaveLength(1);
+  });
+
+  it('does not let a neighbouring line excuse a bare citation either', () => {
+    expect(
+      blocking('Section 194J applies to consultants.\nThe legacy system is out of scope.'),
+    ).toHaveLength(1);
+  });
+
+  it('judges each mention on its own, in the same text', () => {
+    const text =
+      'A deduction against Section 194J is rejected. Separately, deduct under Section 194C for contractors.';
+
+    const all = scan(text);
+    expect(all).toHaveLength(2);
+    expect(all.map((v) => v.severity)).toEqual(['advisory', 'blocking']);
+    expect(blockingViolations(all)).toHaveLength(1);
+  });
+
+  it('documents a known limit rather than hiding it', () => {
+    // KNOWN LIMIT. This is a heuristic, and a sentence written to pass it will. The
+    // human approval gate is the control that catches this, not the lint. It is asserted
+    // here so nobody mistakes the guard for a guarantee — if this ever starts blocking,
+    // the rule has changed and the documentation must change with it.
+    expect(blocking('Section 194J applies to professional fees (see Section 393).')).toEqual([]);
   });
 });
 
@@ -604,6 +695,48 @@ describe('persistence', () => {
     const tds001 = stored.rules.find((r) => r.key === 'TDS-001');
     const source = COMPLIANCE_PACK.rules.find((r) => r.key === 'TDS-001');
     expect(tds001).toEqual(source);
+  });
+
+  describe('ensurePackInstalled', () => {
+    // loadPack had exactly one caller outside the tests: the seed script, which loads
+    // *fixtures*. A real install runs db:migrate and never db:seed, so it had no pack, the
+    // Task Agent skipped the trace, and the trace route returned an empty rule list.
+    // Nothing failed. These pin the fix.
+    it('installs the pack into a database that never ran the seed', () => {
+      expect(installedPackVersion(db)).toBeUndefined();
+
+      ensurePackInstalled(db);
+
+      expect(installedPackVersion(db)).toBe(PACK_VERSION);
+      expect(readPack(db).rules).toHaveLength(15);
+    });
+
+    it('does nothing when the current pack is already there', () => {
+      loadPack(db);
+
+      // loadPack reports how many rules it inserted, so a second call returning 0 shows
+      // the helper did not reinstall anything.
+      ensurePackInstalled(db);
+      expect(loadPack(db)).toBe(0);
+    });
+
+    it('is safe to call repeatedly', () => {
+      for (let i = 0; i < 3; i += 1) ensurePackInstalled(db);
+
+      expect(readPack(db).rules).toHaveLength(15);
+    });
+
+    it('installs a newer pack alongside an older one rather than refusing', () => {
+      loadPack(db, { ...COMPLIANCE_PACK, version: '0.9.0' });
+      expect(installedPackVersion(db)).toBe('0.9.0');
+
+      ensurePackInstalled(db);
+
+      // The older version stays: an approval records the pack version it was granted
+      // under, so the rule text in force then has to remain recoverable.
+      expect(installedPackVersion(db)).toBe(PACK_VERSION);
+      expect(readPack(db, '0.9.0').rules).toHaveLength(15);
+    });
   });
 
   it('is idempotent', () => {

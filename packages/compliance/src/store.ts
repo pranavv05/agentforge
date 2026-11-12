@@ -62,6 +62,27 @@ export function loadPack(db: Db, pack: CompliancePack = COMPLIANCE_PACK): number
   );
 }
 
+/**
+ * Makes sure the pack the code ships is the pack the database holds.
+ *
+ * `loadPack` had exactly one caller outside the tests: `scripts/seed.ts`. A deployment
+ * that ran `db:migrate` and never `db:seed` — which is what a real install does, because
+ * the seed loads *fixtures* — therefore had no pack in its database. Nothing failed.
+ * The Task Agent skips the trace when no pack is installed, and the trace route returns an
+ * empty rule list, so compliance traceability, the third headline claim of the product,
+ * silently did not exist. It was found by running the Task Agent against a scratch
+ * database that, like a real install, had never been seeded.
+ *
+ * Cheap when current (one indexed read) and idempotent when not, so it is safe to call
+ * wherever the pack is consumed. It is not a migration on purpose: migrations here are
+ * checksum-guarded and applied once, and seeding data from one is the wrong tool for
+ * something that must track the code's pack version.
+ */
+export function ensurePackInstalled(db: Db, pack: CompliancePack = COMPLIANCE_PACK): void {
+  if (installedPackVersion(db) === pack.version) return;
+  loadPack(db, pack);
+}
+
 /** The highest pack version installed, or undefined when none is. */
 export function installedPackVersion(db: Db): string | undefined {
   return db

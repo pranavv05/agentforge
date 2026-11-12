@@ -32,6 +32,7 @@ export {
 export { buildTraceMatrix, unscheduledRules, untracedRules, type TraceInput } from './trace.ts';
 
 export {
+  ensurePackInstalled,
   installedPackVersion,
   loadPack,
   readPack,
