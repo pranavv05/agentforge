@@ -473,6 +473,38 @@ describe('POST /api/specs/:id/design/draft', () => {
 });
 
 describe('GET /api/specs/:id/stream', () => {
+  it('refuses a request with no session, as every other route does', async () => {
+    // This route used to open the stream unconditionally: with no session it returned
+    // 200 and served any spec's live state and spend, while the same request to the
+    // spec detail route was refused with 401. It also let an anonymous caller hold a
+    // connection open for ten minutes, polling the database twice a second.
+    const specId = newDraftingSpec('Anonymous stream');
+    const streamRoute = await import('@/app/api/specs/[id]/stream/route');
+
+    const response = await streamRoute.GET(
+      new Request(`http://localhost/api/specs/${specId}/stream`),
+      { params: Promise.resolve({ id: specId }) },
+    );
+
+    expect(response.status).toBe(401);
+    // A refusal, not a stream: nothing may be written to a caller who is not allowed in.
+    expect(response.headers.get('content-type')).not.toContain('text/event-stream');
+    expect(contract.ApiErrorSchema.parse(await response.json()).error.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('answers an unknown spec with a real 404, not a 200 containing an error event', async () => {
+    // An EventSource cannot read a response body, so a failure delivered as an event
+    // inside a 200 is one the client has no way to tell from success.
+    const streamRoute = await import('@/app/api/specs/[id]/stream/route');
+
+    const response = await streamRoute.GET(req('/api/specs/spec_nope/stream'), {
+      params: Promise.resolve({ id: 'spec_nope' }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(contract.ApiErrorSchema.parse(await response.json()).error.code).toBe('NOT_FOUND');
+  });
+
   it('emits the current state and cost, then a terminal done', async () => {
     const specId = newDraftingSpec('Streaming');
     stub.reply({ output: REQUIREMENTS_OUTPUT });
@@ -483,7 +515,7 @@ describe('GET /api/specs/:id/stream', () => {
 
     const streamRoute = await import('@/app/api/specs/[id]/stream/route');
     const controller = new AbortController();
-    const response = streamRoute.GET(
+    const response = await streamRoute.GET(
       req(`/api/specs/${specId}/stream`, { signal: controller.signal }),
       { params: Promise.resolve({ id: specId }) },
     );

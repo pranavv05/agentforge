@@ -1,11 +1,14 @@
 import {
+  ApiErrorSchema,
   StreamEventSchema,
+  isAgentForgeError,
   isAwaitingHuman,
   isTerminalState,
   type StreamEvent,
 } from '@agentforge/contract';
 import { getDb } from '@agentforge/db';
 import { getCostSummary, requireSpecById } from '@agentforge/orchestrator';
+import { requestActor } from '@/lib/actor';
 
 /**
  * `GET /api/specs/:id/stream` — server-sent events for one spec.
@@ -32,7 +35,32 @@ const MAX_DURATION_MS = 10 * 60 * 1000;
 /** Keep-alive comment interval, to survive proxies that time out idle connections. */
 const HEARTBEAT_MS = 15_000;
 
-export function GET(request: Request, { params }: { params: Promise<{ id: string }> }): Response {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  // Authenticated and validated *before* the stream opens, not inside it.
+  //
+  // This route used to start streaming unconditionally: with no session at all it
+  // returned 200 and served any spec's live state and spend, while every other route
+  // refused the same request with 401. It was also a resource problem, not just a
+  // disclosure one — an unauthenticated caller could hold a connection open for ten
+  // minutes, each polling the database twice a second.
+  //
+  // It cannot use `handle()`, which returns JSON, so it asks the same question
+  // (`requestActor`) and refuses in the same shape. The status has to be a real HTTP
+  // status rather than an `error` event inside a 200: an EventSource cannot read a body,
+  // so a refusal it cannot see as a status is a refusal it cannot act on.
+  try {
+    await requestActor(request);
+    requireSpecById(getDb(), (await params).id);
+  } catch (error) {
+    if (isAgentForgeError(error)) {
+      return Response.json(ApiErrorSchema.parse(error.toApiError()), { status: error.status });
+    }
+    throw error;
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
