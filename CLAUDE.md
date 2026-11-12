@@ -332,6 +332,23 @@ focus restoration after a decision, which needs a real approval to exercise. A b
 audit cannot run in CI here, so `apps/web/test/a11y.test.ts` pins the structural
 decisions only — it does not and cannot assert contrast or focus behaviour.
 
+**Runs are now followed live, and "quiet" is an inference, not a fact.** The footer follows
+a run over the SSE route, showing elapsed time and this run's spend, and refreshes the
+thread when the state changes. It exists because the old footer treated a spec that was
+*still working* the same as one whose run had died: reload mid-run and it offered "run
+again, it's safe" about a run that was still going. Verified on two real runs ($0.0052
+in total): the indicator appears, relabels, spend moved $0.0000 -> $0.0014 when a model
+call finished, and a page that **reloaded mid-run and never started it** showed the run
+as live, offered no re-run, and completed by itself. Limits, stated plainly: nothing in the
+database says a run is alive, so liveness is inferred from state-entry and last-call times.
+Spend is recorded when a call *completes*, so one long call is silent; "quiet" therefore
+needs 4 minutes and is worded as "may have been interrupted", not as a verdict. **Not
+observed:** the quiet state on a genuinely dead run (it needs four minutes of silence; the
+logic is unit-tested and the markup axe-checked), the connection-lost state, and
+screen-reader output. The contract declares `token` and `tool_call` stream events but
+**nothing emits them** — the route is database-polled — so no UI is built on them. A
+throwaway spec, "Probe: live run indicator", was created in the dev database by this test.
+
 **Empty and failure states exist now, and some were only exercised statically.** The
 workspace had no `loading`, `error` or `not-found` file at all, and four components
 each translated errors their own way (mostly by showing the raw server message). Now one

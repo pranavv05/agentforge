@@ -20,6 +20,7 @@ import { buildThread } from '@/lib/thread';
 import { Thread } from '@/components/workspace/thread';
 import { DocumentPane } from '@/components/workspace/document-pane';
 import { ThreadFooter } from '@/components/workspace/thread-footer';
+import { runActivity } from '@/lib/activity';
 import { ThreadHeader } from '@/components/workspace/thread-header';
 
 /**
@@ -126,6 +127,8 @@ export default async function ThreadPage({
           status={spec.status}
           specVersion={spec.version}
           mode={spec.mode}
+          activity={runActivity(db, id, spec.status, items)}
+          openQuestions={items.filter((i) => i.type === 'question' && i.answer === null).length}
         />
       </section>
 

@@ -2363,3 +2363,108 @@ button.empty__example:focus-visible {
     background-position: -200% 0;
   }
 }
+
+/* ================================================================== a run in progress */
+
+.tfoot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.live {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ws-line-strong);
+  border-radius: var(--ws-r);
+  background: var(--ws-accent-wash);
+}
+
+.live.is-quiet {
+  background: var(--ws-warn-wash);
+}
+
+.live__dot {
+  flex: none;
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  margin-block-start: 0.4rem;
+  border-radius: 50%;
+  background: var(--ws-accent);
+  /* A slow breath, not a spinner: this is on screen for a minute or more, and a fast
+     animation that long is the thing prefers-reduced-motion exists to switch off. The
+     global reduced-motion rule does. */
+  animation: live-breathe 1.8s ease-in-out infinite;
+}
+
+.live.is-quiet .live__dot {
+  /* Quiet is not "alive": the dot stops moving and changes colour, so the two states
+     differ by more than a hue — which not everyone can distinguish. */
+  background: var(--ws-warn);
+  animation: none;
+}
+
+.live__body {
+  display: grid;
+  gap: 0.2rem;
+  min-inline-size: 0;
+}
+
+.live__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  margin: 0;
+}
+
+.live__what {
+  font-size: var(--ws-t);
+  font-weight: 600;
+  color: var(--ws-ink);
+}
+
+.live__meta {
+  font-family: var(--ws-mono);
+  font-size: var(--ws-t-xs);
+  color: var(--ws-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.live__note {
+  margin: 0;
+  font-size: var(--ws-t-xs);
+  line-height: 1.5;
+  color: var(--ws-muted);
+}
+
+.live__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ws-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.live__link:focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 2px;
+}
+
+@keyframes live-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
