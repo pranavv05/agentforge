@@ -827,8 +827,8 @@ export function comparePage(slug: string, signedIn: boolean): string | null {
 <section class="ps"><div class="wrap">
 <div class="fact"><div><small>Licence</small><b style="font-size:13.5px;font-weight:600">${esc(t.license)}</b></div><div><small>Activity</small><b style="font-size:13.5px;font-weight:600">${esc(t.activity)}</b></div><div><small>Enforces approval gates?</small><b style="font-size:13.5px;font-weight:600">${esc(t.enforces)}</b></div><div><small>Best described as</small><b style="font-size:13.5px;font-weight:600">${esc(t.tag)}</b></div></div>
 <div class="vs" style="margin-top:22px">
- <div class="side-c"><h3>${esc(t.name)}</h3><p class="by">Where it is strong, and what it does not claim</p><ul>${li(t.great, 'y')}${li(t.gaps, 'n')}</ul></div>
- <div class="side-c us"><h3>${BRAND}</h3><p class="by">What is different, and where we are limited</p><ul>${mine.map(([k, x]) => `<li>${ic(k)}<span>${esc(x)}</span></li>`).join('')}</ul></div>
+ <div class="side-c"><h2>${esc(t.name)}</h2><p class="by">Where it is strong, and what it does not claim</p><ul>${li(t.great, 'y')}${li(t.gaps, 'n')}</ul></div>
+ <div class="side-c us"><h2>${BRAND}</h2><p class="by">What is different, and where we are limited</p><ul>${mine.map(([k, x]) => `<li>${ic(k)}<span>${esc(x)}</span></li>`).join('')}</ul></div>
 </div>
 <div class="cards3" style="margin-top:22px;grid-template-columns:1fr 1fr 1fr">
  <div class="fc"><div class="rc-t"><i class="fa-solid fa-hand-point-right"></i> Pick ${esc(t.name)} when</div><p>${esc(t.pickThem)}</p></div>

@@ -109,6 +109,29 @@ describe('the supported subset renders', () => {
     expect(html).toContain('a blockquote the renderer has no rule for');
   });
 
+  it('shifts headings down so an embedded document does not claim the page h1', () => {
+    // The thread title is the page's h1. A document pane that also emitted an h1 would
+    // tell a screen reader the page has two subjects.
+    const html = renderToStaticMarkup(
+      createElement(Markdown, {
+        source: ['# Requirements', '', '## Non-goals'].join('\n'),
+        headingOffset: 1,
+      }),
+    );
+
+    expect(html).toContain('<h2>Requirements</h2>');
+    expect(html).toContain('<h3>Non-goals</h3>');
+    expect(html).not.toContain('<h1>');
+  });
+
+  it('clamps at h6 rather than inventing a level', () => {
+    const html = renderToStaticMarkup(
+      createElement(Markdown, { source: '#### Deep', headingOffset: 5 }),
+    );
+
+    expect(html).toContain('<h6>Deep</h6>');
+  });
+
   it('survives an empty document', () => {
     expect(render('')).toBe('');
   });

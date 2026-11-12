@@ -47,25 +47,25 @@ ${logo()}
 <ul class="menu" id="menu" style="padding:0">
  <li><button type="button" aria-expanded="false">Product ${chev}</button>
   <div class="mega">
-   <div><h6>Platform</h6>
+   <div><div class="gh">Platform</div>
     <a class="mi" href="/product/pipeline"><span class="ic"><i class="fa-solid fa-diagram-project"></i></span><div><b>Governed pipeline</b><span>Explore the state machine and try to break the rules</span></div></a>
     <a class="mi" href="/product/grounding"><span class="ic g"><i class="fa-solid fa-shield-halved"></i></span><div><b>Grounding verifier</b><span>Check any claim against a real file and line</span></div></a>
     <a class="mi" href="/product/compliance"><span class="ic v"><i class="fa-solid fa-scale-balanced"></i></span><div><b>Compliance pack</b><span>GST and TDS Section 393 rules, with a TDS calculator</span></div></a>
    </div>
-   <div><h6>Under the hood</h6>
+   <div><div class="gh">Under the hood</div>
     <a class="mi" href="/docs/concepts"><span class="ic"><i class="fa-solid fa-lock"></i></span><div><b>Core concepts</b><span>Pipeline, approvals, audit log, edit hook</span></div></a>
     <a class="mi" href="/docs/grounding-compliance"><span class="ic o"><i class="fa-solid fa-magnifying-glass"></i></span><div><b>Grounding and compliance</b><span>How claims are verified, how rules apply</span></div></a>
     <a class="mi" href="/resources/edit-hook"><span class="ic g"><i class="fa-solid fa-plug"></i></span><div><b>Edit hook</b><span>See when your coding agent may write code</span></div></a>
    </div></div></li>
  <li><button type="button" aria-expanded="false">Resources ${chev}</button>
   <div class="mega">
-   <div><h6>Learn</h6>
+   <div><div class="gh">Learn</div>
     <a class="mi" href="/docs"><span class="ic"><i class="fa-solid fa-book-open"></i></span><div><b>Documentation</b><span>Guides, concepts and reference</span></div></a>
     <a class="mi" href="/docs/quickstart"><span class="ic v"><i class="fa-solid fa-rocket"></i></span><div><b>Quickstart</b><span>Your first spec in five minutes</span></div></a>
     <a class="mi" href="/docs/api"><span class="ic o"><i class="fa-solid fa-code"></i></span><div><b>API reference</b><span>Endpoints, request bodies and examples</span></div></a>
     <a class="mi" href="/docs/changelog"><span class="ic g"><i class="fa-solid fa-clock-rotate-left"></i></span><div><b>Changelog</b><span>What changed in each release</span></div></a>
    </div>
-   <div><h6>Tools</h6>
+   <div><div class="gh">Tools</div>
     <a class="mi" href="/resources/edit-hook"><span class="ic g"><i class="fa-solid fa-hand"></i></span><div><b>Edit-hook tester</b><span>Pick a state and a tool, get allow or deny</span></div></a>
     <a class="mi" href="/resources/errors"><span class="ic o"><i class="fa-solid fa-triangle-exclamation"></i></span><div><b>Error decoder</b><span>Look up any error code and its fix</span></div></a>
     <a class="mi" href="/resources/templates"><span class="ic v"><i class="fa-solid fa-file-arrow-down"></i></span><div><b>Spec templates</b><span>EARS requirements, grounded design, tasks</span></div></a>
@@ -73,12 +73,12 @@ ${logo()}
    </div></div></li>
  <li><button type="button" aria-expanded="false">Compare ${chev}</button>
   <div class="mega">
-   <div><h6>Versus</h6>
+   <div><div class="gh">Versus</div>
     <a class="mi" href="/compare/spec-kit"><span class="ic"><i class="fa-solid fa-code-branch"></i></span><div><b>GitHub Spec Kit</b><span>Prompt templates inside an agent chat</span></div></a>
     <a class="mi" href="/compare/openspec"><span class="ic g"><i class="fa-solid fa-file-circle-check"></i></span><div><b>OpenSpec</b><span>Lightweight propose, apply, archive</span></div></a>
     <a class="mi" href="/compare/kiro"><span class="ic o"><i class="fa-solid fa-laptop-code"></i></span><div><b>Kiro</b><span>AWS spec-driven IDE</span></div></a>
    </div>
-   <div><h6>&nbsp;</h6>
+   <div><div class="gh" aria-hidden="true">&nbsp;</div>
     <a class="mi" href="/compare/bmad"><span class="ic v"><i class="fa-solid fa-users-gear"></i></span><div><b>BMAD-METHOD</b><span>21 personas, 50+ workflows</span></div></a>
     <a class="mi" href="/compare/spec-workflow-mcp"><span class="ic"><i class="fa-solid fa-plug-circle-check"></i></span><div><b>Spec Workflow MCP</b><span>The closest neighbour</span></div></a>
     <a class="mi" href="/compare#fit"><span class="ic g"><i class="fa-solid fa-compass"></i></span><div><b>Which one fits you?</b><span>Four questions, one honest answer</span></div></a>
@@ -101,10 +101,10 @@ export function footer() {
   return `<footer class="f"><div class="wrap">
 <div class="fgrid">
  <div>${logo()}<p style="color:var(--mute);font-size:14px;max-width:260px;margin:14px 0 0">${TAGLINE}. Agents propose, the orchestrator transitions, humans approve.</p></div>
- <div><h6>Product</h6><a href="/product/pipeline">Governed pipeline</a><a href="/product/grounding">Grounding verifier</a><a href="/product/compliance">Compliance pack</a></div>
- <div><h6>Resources</h6><a href="/docs">Documentation</a><a href="/resources/edit-hook">Edit-hook tester</a><a href="/resources/errors">Error decoder</a><a href="/resources/templates">Spec templates</a></div>
- <div><h6>Compare</h6><a href="/compare">Overview</a><a href="/compare/spec-kit">Spec Kit</a><a href="/compare/kiro">Kiro</a><a href="/compare/spec-workflow-mcp">Spec Workflow MCP</a></div>
- <div><h6>Account</h6><a href="/sign-in">Sign in</a><a href="/docs/changelog">Changelog</a></div>
+ <div><h2 class="gh">Product</h2><a href="/product/pipeline">Governed pipeline</a><a href="/product/grounding">Grounding verifier</a><a href="/product/compliance">Compliance pack</a></div>
+ <div><h2 class="gh">Resources</h2><a href="/docs">Documentation</a><a href="/resources/edit-hook">Edit-hook tester</a><a href="/resources/errors">Error decoder</a><a href="/resources/templates">Spec templates</a></div>
+ <div><h2 class="gh">Compare</h2><a href="/compare">Overview</a><a href="/compare/spec-kit">Spec Kit</a><a href="/compare/kiro">Kiro</a><a href="/compare/spec-workflow-mcp">Spec Workflow MCP</a></div>
+ <div><h2 class="gh">Account</h2><a href="/sign-in">Sign in</a><a href="/docs/changelog">Changelog</a></div>
 </div>
 <div class="fbot"><span>&copy; 2026 ${BRAND}.</span><span>Open source. Agents propose; humans approve.</span></div>
 </div></footer>`;

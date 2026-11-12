@@ -418,7 +418,7 @@ export function Hero() {
                 </aside>
                 <div className="pane">
                   <div className="row">
-                    <h4 style={{ margin: 0 }}>Welcome back, Asha</h4>
+                    <p style={{ margin: 0, fontWeight: 700 }}>Welcome back, Asha</p>
                     <span className="sp" />
                     <a className="tag acc" href="/sign-up">
                       2 waiting on you

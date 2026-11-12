@@ -82,10 +82,18 @@ export function DocumentPane({
 
       <ContentHash value={contentHash} />
 
-      <div className="pane__doc">
+      <div
+        className="pane__doc"
+        // A scrollable region has to be reachable by keyboard, or a long document cannot be
+        // read without a mouse. It is a region because a focusable element with no role
+        // and no name tells a screen reader nothing about what it landed on.
+        role="region"
+        aria-label={`${kind} document text`}
+        tabIndex={0}
+      >
         {kind === 'context' && <Grounding evidence={evidence} />}
         {kind === 'tasks' && <TaskProgress tasks={tasks} />}
-        <Markdown source={contentMd} />
+        <Markdown source={contentMd} headingOffset={1} />
       </div>
 
       {atGate && isHead && (

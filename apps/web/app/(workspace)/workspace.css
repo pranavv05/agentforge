@@ -34,20 +34,23 @@
   --ws-ink: #0b1220;
   --ws-ink-soft: #2a3342;
   --ws-muted: #5b6575;
-  --ws-faint: #8a94a6;
+  --ws-faint: #667082;
 
   --ws-line: #e6ebf2;
   --ws-line-strong: #d6dde8;
 
-  --ws-accent: #4f8ff0;
+  --ws-accent: #2563c9;
   --ws-accent-soft: #7ab1fe;
   --ws-accent-wash: #eaf3ff;
+  /* The colour of text sitting ON an accent fill. A literal white is wrong in dark,
+     where the accent is light enough that white on it is 3.4:1. */
+  --ws-on-accent: #ffffff;
 
-  --ws-ok: #16a34a;
+  --ws-ok: #15803d;
   --ws-ok-wash: #e8f7ee;
   --ws-warn: #b45309;
   --ws-warn-wash: #fff4e0;
-  --ws-fail: #dc2626;
+  --ws-fail: #b91c1c;
   --ws-fail-wash: #fdecec;
 
   /* Depth. On light, a card needs a shadow where on dark a lighter fill was enough. */
@@ -105,7 +108,7 @@
     --ws-ink: #ededf0;
     --ws-ink-soft: #b4b8bf;
     --ws-muted: #8a8f98;
-    --ws-faint: #5c6166;
+    --ws-faint: #868b93;
 
     --ws-line: #232629;
     --ws-line-strong: #2f3337;
@@ -113,6 +116,7 @@
     --ws-accent: #7b85dd;
     --ws-accent-soft: #9aa2e8;
     --ws-accent-wash: #1a1d33;
+    --ws-on-accent: #0b0c0d;
 
     --ws-ok: #3fb950;
     --ws-ok-wash: #11261a;
@@ -135,7 +139,7 @@
   --ws-ink: #ededf0;
   --ws-ink-soft: #b4b8bf;
   --ws-muted: #8a8f98;
-  --ws-faint: #5c6166;
+  --ws-faint: #868b93;
 
   --ws-line: #232629;
   --ws-line-strong: #2f3337;
@@ -143,6 +147,7 @@
   --ws-accent: #7b85dd;
   --ws-accent-soft: #9aa2e8;
   --ws-accent-wash: #1a1d33;
+  --ws-on-accent: #0b0c0d;
 
   --ws-ok: #3fb950;
   --ws-ok-wash: #11261a;
@@ -169,7 +174,7 @@
 
 .ws ::selection {
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
 }
 
 .ws code,
@@ -561,6 +566,9 @@
 
 .composer__repo:focus {
   border-color: var(--ws-accent);
+  /* A colour change alone is a 1px difference. WCAG 2.4.7 wants focus to be
+     unmistakable, and a ring is. */
+  box-shadow: 0 0 0 3px var(--ws-accent-wash);
 }
 
 .composer__bar {
@@ -613,7 +621,7 @@
   border: 0;
   border-radius: var(--ws-r-sm);
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
   font-size: var(--ws-t);
   cursor: pointer;
   transition: opacity 120ms ease;
@@ -939,7 +947,7 @@
 
 .btn--accent {
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
 }
 
 .answer {
@@ -1026,7 +1034,7 @@
   border: 0;
   border-radius: var(--ws-r-sm);
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
   font: inherit;
   font-size: var(--ws-t-sm);
   font-weight: 500;
@@ -1325,6 +1333,9 @@
 
 .decide__comment:focus {
   border-color: var(--ws-accent);
+  /* A colour change alone is a 1px difference. WCAG 2.4.7 wants focus to be
+     unmistakable, and a ring is. */
+  box-shadow: 0 0 0 3px var(--ws-accent-wash);
 }
 
 .decide__go {
@@ -1332,7 +1343,7 @@
   border: 0;
   border-radius: var(--ws-r-sm);
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
   font: inherit;
   font-size: var(--ws-t-sm);
   font-weight: 500;
@@ -1434,6 +1445,9 @@
 
 .ans__input:focus {
   border-color: var(--ws-accent);
+  /* A colour change alone is a 1px difference. WCAG 2.4.7 wants focus to be
+     unmistakable, and a ring is. */
+  box-shadow: 0 0 0 3px var(--ws-accent-wash);
 }
 
 .ans__go {
@@ -1442,7 +1456,7 @@
   border: 0;
   border-radius: var(--ws-r-sm);
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--ws-on-accent);
   font: inherit;
   font-size: var(--ws-t-sm);
   font-weight: 500;
@@ -1829,4 +1843,32 @@
 
 .hashRow__state.is-on {
   color: var(--ws-ok);
+}
+
+/* ----------------------------------------------------------- reduced motion */
+
+/*
+ * The workspace has few animations, but someone who has asked their system for less
+ * motion should get none: this is a tool people read for an hour, and a pulsing
+ * indicator is exactly the thing that request exists to switch off.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ws *,
+  .ws *::before,
+  .ws *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * `main` is focusable only so the skip link and post-action focus restoration have
+ * somewhere to land. It is not a control, so a ring around the entire stage would be
+ * noise rather than information — the thing that took focus is the region, and the next
+ * Tab moves into it.
+ */
+.stage:focus {
+  outline: none;
 }

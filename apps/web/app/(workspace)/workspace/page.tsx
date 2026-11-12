@@ -21,7 +21,7 @@ const EXAMPLES: readonly string[] = [
 
 export default function NewThreadPage() {
   return (
-    <main className="stage">
+    <main id="main" tabIndex={-1} className="stage">
       <div className="empty">
         <div className="empty__inner">
           <h1 className="empty__title">What do you want to build?</h1>

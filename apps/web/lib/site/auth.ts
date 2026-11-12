@@ -8,7 +8,7 @@ export function authPage(mode: 'login' | 'signup' | 'notfound') {
   const su = mode === 'signup';
   return `${head((su ? 'Create account' : 'Sign in') + ' · ' + BRAND)}
 <body><div class="auth">
-<div class="auth-l">
+<main id="main" class="auth-l">
   <div>${logo()}</div>
   <div class="auth-form">
     <h1>${su ? 'Create your workspace' : 'Welcome back'}</h1>
@@ -23,15 +23,15 @@ export function authPage(mode: 'login' | 'signup' | 'notfound') {
       </div>
       <button class="btn dark" id="go" type="submit" style="width:100%;justify-content:center;padding:13px">${su ? 'Create account' : 'Sign in'} <i class="fa-solid fa-arrow-right"></i></button>
     </form>
-    <p style="text-align:center;color:var(--mute);font-size:14px;margin-top:22px">${su ? 'Already have an account? <a href="/sign-in" style="color:var(--acc2);font-weight:650">Sign in</a>' : 'New here? <a href="/sign-up" style="color:var(--acc2);font-weight:650">Create an account</a>'}</p>
+    <p style="text-align:center;color:var(--mute);font-size:14px;margin-top:22px">${su ? 'Already have an account? <a href="/sign-in" style="color:var(--acc-ink);font-weight:650">Sign in</a>' : 'New here? <a href="/sign-up" style="color:var(--acc-ink);font-weight:650">Create an account</a>'}</p>
   </div>
   <p style="color:var(--mute2);font-size:12.5px;margin:0">Passwords are hashed and never stored in the clear; sessions are HttpOnly cookies.</p>
-</div>
-<aside class="auth-r"><div class="auth-card">
+</main>
+<aside class="auth-r" aria-label="Example of an evidence-checked design"><div class="auth-card">
   <div class="win"><div class="win-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
   <div class="pane">
-    <h4>Evidence-checked design</h4>
-    <table class="tbl-m"><tr><th>Claim</th><th></th></tr>
+    <h2 class="auth-h">Evidence-checked design</h2>
+    <table class="tbl-m"><tr><th>Claim</th><th><span class="sr">Result</span></th></tr>
     <tr><td><code>computeTds</code> in tds.ts</td><td><span class="tag ok">verified</span></td></tr>
     <tr><td><code>payVendor</code> calls it</td><td><span class="tag ok">verified</span></td></tr>
     <tr><td><code>computeSection393</code></td><td><span class="tag bad">file_not_found</span></td></tr></table>

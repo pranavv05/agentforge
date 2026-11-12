@@ -44,12 +44,14 @@ export function Manifesto() {
         <p className="eyebrow center" style={{ textAlign: 'center' }}>
           The idea
         </p>
-        <p className="mani" data-words="" aria-label={text}>
+        {/* The words are real text, not decoration. They used to be aria-hidden with the
+            sentence repeated in an aria-label on the <p> — but a paragraph has no role to
+            carry a name, so assistive tech could be left with nothing for the headline
+            message. Each word is a span only so the scroll effect can light them up. */}
+        <p className="mani" data-words="">
           {text.split(/\s+/).map((w, i, a) => (
             <span key={i}>
-              <span className="mw" aria-hidden="true">
-                {w}
-              </span>
+              <span className="mw">{w}</span>
               {i < a.length - 1 ? ' ' : ''}
             </span>
           ))}
@@ -72,7 +74,7 @@ export function Pipeline() {
           <div className="pipe rv" id="pipe">
             <a className="pnode" href="/docs/grounding-compliance#grounding-verifier">
               <span className="tag v">Brownfield only</span>
-              <h4>Context</h4>
+              <h3>Context</h3>
               <p>Repo map, FTS5, budgeted agentic loop, grounding verifier.</p>
             </a>
             <div className="pgate">
@@ -80,7 +82,7 @@ export function Pipeline() {
             </div>
             <a className="pnode" href="/docs/quickstart#4-approve-requirements">
               <span className="tag acc">Agent</span>
-              <h4>Requirements</h4>
+              <h3>Requirements</h3>
               <p>Clarifying questions, then EARS requirements with acceptance criteria.</p>
             </a>
             <div className="pgate">
@@ -90,7 +92,7 @@ export function Pipeline() {
             </div>
             <a className="pnode" href="/docs/quickstart#5-approve-the-design">
               <span className="tag acc">Agent</span>
-              <h4>Design</h4>
+              <h3>Design</h3>
               <p>Refuses to start unless the approved requirements hash matches.</p>
             </a>
             <div className="pgate">
@@ -100,7 +102,7 @@ export function Pipeline() {
             </div>
             <a className="pnode" href="/docs/quickstart#6-implement">
               <span className="tag acc">Agent</span>
-              <h4>Tasks</h4>
+              <h3>Tasks</h3>
               <p>Each task maps to a requirement and a test id.</p>
             </a>
             <div className="pgate">
@@ -110,7 +112,7 @@ export function Pipeline() {
             </div>
             <a className="pnode" href="/docs/concepts#edit-hook">
               <span className="tag ok">Claude Code</span>
-              <h4>Implement</h4>
+              <h3>Implement</h3>
               <p>PreToolUse hook denies Edit and Write until the spec is ready.</p>
             </a>
           </div>
@@ -364,7 +366,9 @@ export function Compare() {
           <table className="cmp">
             <thead>
               <tr>
-                <th />
+                <th>
+                  <span className="sr">Result</span>
+                </th>
                 <th className="us">AgentForge</th>
                 <th>Spec Kit</th>
                 <th>OpenSpec</th>

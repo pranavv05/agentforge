@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { announce, focusMain } from '@/components/workspace/announcer';
 import { useRouter } from 'next/navigation';
 import { AgentForgeError, createClient, type ApprovalDecision } from '@agentforge/contract';
 
@@ -67,6 +68,14 @@ export function DecideControls({
 
       router.refresh();
       router.push(`/workspace/${specId}`);
+      announce(
+        decision === 'approve'
+          ? 'Approved. The decision is recorded against this content hash.'
+          : 'Changes requested. The agent will redraft.',
+      );
+      // The control that had focus is about to unmount; without this focus falls to the
+      // top of the page.
+      window.setTimeout(focusMain, 0);
     } catch (caught) {
       if (caught instanceof AgentForgeError) {
         setError(

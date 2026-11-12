@@ -98,7 +98,7 @@ export default async function ThreadPage({
   })();
 
   return (
-    <main className={`stage${paneData === null ? '' : ' stage--split'}`}>
+    <main id="main" tabIndex={-1} className={`stage${paneData === null ? '' : ' stage--split'}`}>
       <section className="thread" aria-label="Conversation">
         <ThreadHeader
           title={spec.title}

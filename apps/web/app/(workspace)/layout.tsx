@@ -7,6 +7,7 @@ import { listSpecs } from '@agentforge/orchestrator';
 import { isAwaitingHuman } from '@agentforge/contract';
 import { getAuth } from '@/lib/auth';
 import { Rail } from '@/components/workspace/rail';
+import { Announcer } from '@/components/workspace/announcer';
 import './workspace.css';
 
 /**
@@ -62,6 +63,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
 
       <div className="ws">
+        <Announcer />
         <Rail
           threads={specs.map((spec) => ({
             id: spec.id,

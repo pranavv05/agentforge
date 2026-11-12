@@ -193,7 +193,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('.copy');if
 function sidebar(active: string) {
   return DOC_GROUPS.map(
     (g) =>
-      `<h6>${g}</h6>` +
+      `<p class="gh">${g}</p>` +
       DOC_PAGES.filter((p) => p.group === g)
         .map(
           (p) =>
@@ -240,7 +240,7 @@ export function docsPage(slug: string, signedIn: boolean) {
 <div class="pager">${prev ? `<a href="/docs/${prev.slug}"><small>&larr; Previous</small><b>${prev.title}</b></a>` : '<span></span>'}${next ? `<a class="r" href="/docs/${next.slug}"><small>Next &rarr;</small><b>${next.title}</b></a>` : ''}</div>
 <p class="helpful">Found a problem with this page? <a href="/docs/faq">Check the FAQ</a> or <a href="/docs/errors">troubleshooting</a>.</p>
 </article>
-<aside class="toc" aria-label="On this page">${toc.length ? `<h6>On this page</h6>${toc.map((t) => `<a class="${t.lvl === 3 ? 'l3' : ''}" href="#${t.id}">${esc(t.text)}</a>`).join('')}` : ''}</aside>
+<aside class="toc" aria-label="On this page">${toc.length ? `<p class="gh">On this page</p>${toc.map((t) => `<a class="${t.lvl === 3 ? 'l3' : ''}" href="#${t.id}">${esc(t.text)}</a>`).join('')}` : ''}</aside>
 </div></main>${footer()}${navScript}${searchScript}${copyScript}
 <script>(function(){var l=[].slice.call(document.querySelectorAll('.toc a'));if(!l.length)return;var m={};l.forEach(function(a){m[a.getAttribute('href').slice(1)]=a});var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){l.forEach(function(a){a.classList.remove('on')});var a=m[e.target.id];a&&a.classList.add('on')}})},{rootMargin:'-80px 0px -70% 0px'});document.querySelectorAll('.prose h2,.prose h3').forEach(function(h){io.observe(h)})})();</script>
 </body></html>`;

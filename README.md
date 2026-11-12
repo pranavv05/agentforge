@@ -137,6 +137,32 @@ with `output_config.effort`, set explicitly per stage because model defaults dif
 **No placeholder code on `main`.** `no-warning-comments` makes `TODO`/`FIXME` a lint
 error. Day-1 scaffolding lived behind `SDD_STUB_AGENTS` and is gone.
 
+##Connecting Claude Code to AgentForge : 
+Connecting it
+
+There is nothing to register manually. The MCP server and the edit hook ship as one Claude Code plugin at packages/plugin, and --plugin-dir loads both.
+
+1. Release a spec. In the dashboard, approve requirements, design, then tasks. Approving tasks moves it to READY_FOR_IMPLEMENTATION, which is the gate that permits edits. The reels spec (spec_mwcaig8lbb56f381ec) and the UI spec (spec_mwcagr4x1c1c25f37a) were released and untouched when we last looked. The purchase-order spec already has task 1 done.
+
+2. Pin a target repo to the spec. In the repo where Claude Code will write code:
+
+mkdir -p .sdd && echo "spec_mwcaig8lbb56f381ec" > .sdd/current-spec
+
+SDD_SPEC_ID in the environment also works.
+
+3. Start Claude Code with the plugin, from that repo:
+
+set SDD_DB_PATH=D:\WEB D\PROJECTS\agentforge\data\agentforge.db
+claude --plugin-dir "D:\WEB D\PROJECTS\agentforge\packages\plugin"
+
+Use an absolute SDD_DB_PATH, since the session runs somewhere else. The plugin manifest deliberately doesn't set env vars. It once passed an unexpanded ${SDD_SPEC_ID} and broke the whole thing.
+
+4. Tell it what to do:
+
+Call get_approved_spec, then next_task, then start_task, implement that one task, then complete_task with evidence naming the files.
+
+Interactively, Claude Code will ask you to approve the agentforge-sdd tools once. In -p mode, add --allowedTools "mcp__plugin_agentforge-sdd_agentforge-sdd__*" Write Read Edit, because it can't prompt.
+
 ## Conventions
 
 - **Determinism.** Markdown is rendered from validated JSON by pure functions; nothing

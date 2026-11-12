@@ -5,11 +5,14 @@
   --ink: #0b1220;
   --ink2: #2a3342;
   --mute: #5b6575;
-  --mute2: #8a94a6;
+  --mute2: #667082;
   --line: #e6ebf2;
   --line2: #d6dde8;
   --acc: #7ab1fe;
   --acc2: #4f8ff0;
+  /* The accent as TEXT. --acc2 stays for fills and borders, where 3:1 is enough; as a
+     link colour on white it is 3.22:1, short of the 4.5:1 body text needs. */
+  --acc-ink: #2563c9;
   --acc-bg: #eaf3ff;
   --ok: #16a34a;
   --ok-bg: #e8f7ee;
@@ -253,7 +256,8 @@ pre {
   width: 520px;
   grid-template-columns: 1fr;
 }
-.mega h6 {
+.mega h6,
+.mega .gh {
   margin: 2px 8px 8px;
   font-size: 11px;
   letter-spacing: 0.09em;
@@ -474,7 +478,7 @@ section.s.alt {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--acc2);
+  color: var(--acc-ink);
 }
 h2.t {
   font-size: clamp(30px, 4.2vw, 52px);
@@ -629,7 +633,9 @@ h2.t {
 }
 .side a {
   display: block;
-  padding: 7px 10px;
+  /* 8px, not 7px: with this text size 7px gave a 22px target, under the 24px minimum
+     WCAG 2.5.8 sets for anything clickable. */
+  padding: 8px 10px;
   border-radius: 8px;
   color: var(--mute);
   font-weight: 550;
@@ -651,7 +657,8 @@ h2.t {
   padding: 20px;
   position: relative;
 }
-.pane h4 {
+.pane h4,
+.pane .auth-h {
   margin: 0 0 14px;
   font-size: 16px;
 }
@@ -835,7 +842,8 @@ h2.t {
   box-shadow: var(--shadow);
   position: relative;
 }
-.pnode h4 {
+.pnode h4,
+.pnode h3 {
   margin: 8px 0 4px;
   font-size: 16px;
 }
@@ -1365,7 +1373,8 @@ footer.f {
   grid-template-columns: 1.4fr repeat(4, 1fr);
   gap: 30px;
 }
-.fgrid h6 {
+.fgrid h6,
+.fgrid .gh {
   margin: 0 0 12px;
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -1379,7 +1388,7 @@ footer.f {
   font-size: 14.5px;
 }
 .fgrid a:hover {
-  color: var(--acc2);
+  color: var(--acc-ink);
 }
 .fbot {
   display: flex;
@@ -1589,7 +1598,7 @@ footer.f {
   padding-top: 12px;
   font-weight: 650;
   font-size: 13.5px;
-  color: var(--acc2);
+  color: var(--acc-ink);
 }
 .doc-layout {
   display: grid;
@@ -1607,7 +1616,8 @@ footer.f {
   overflow: auto;
   font-size: 14px;
 }
-.doc-nav h6 {
+.doc-nav h6,
+.doc-nav .gh {
   margin: 16px 10px 6px;
   font-size: 11px;
   letter-spacing: 0.09em;
@@ -1636,7 +1646,8 @@ footer.f {
   max-height: calc(100vh - 110px);
   overflow: auto;
 }
-.toc h6 {
+.toc h6,
+.toc .gh {
   margin: 0 0 8px;
   font-size: 11px;
   letter-spacing: 0.09em;
@@ -1693,7 +1704,7 @@ footer.f {
   margin: 0 0 14px;
 }
 .prose a {
-  color: var(--acc2);
+  color: var(--acc-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: rgba(79, 143, 240, 0.35);
@@ -2061,7 +2072,7 @@ footer.f {
 .prose h2:hover .anchor,
 .prose h3:hover .anchor {
   opacity: 1;
-  color: var(--acc2);
+  color: var(--acc-ink);
 }
 .codebox {
   position: relative;
@@ -2412,6 +2423,14 @@ html:not(.sj) .mq.big .mq-track {
 }
 .sj .mw.on {
   color: var(--ink);
+}
+/* The reveal starts pale and darkens as you scroll to each word, which is a 1.4:1
+   starting state. Someone who has asked their system for more contrast should not have
+   to scroll to be able to read a sentence. */
+@media (prefers-contrast: more) {
+  .sj .mw {
+    color: var(--ink);
+  }
 }
 
 /* split headings */
@@ -2820,4 +2839,18 @@ a.tag {
 section[id],
 div[id='sp'] {
   scroll-margin-top: 72px;
+}
+
+/*
+ * Group labels in menus, the docs sidebar and the footer.
+ *
+ * These were <h6>, which put a level-six heading straight after a level-two one on every
+ * page and — in the nav dropdown — an empty <h6>&nbsp;</h6> used for spacing. They are
+ * labels, so menu and sidebar ones are plain text, and the footer's columns are real
+ * level-two headings. `.gh` carries the weight and line-height the element used to
+ * supply, so the look is unchanged.
+ */
+.gh {
+  font-weight: 700;
+  line-height: 1.4;
 }

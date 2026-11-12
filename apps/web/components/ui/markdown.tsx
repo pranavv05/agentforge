@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ScrollRegion } from '@/components/ui/scroll-region';
 
 /**
  * A renderer for *our own* generated markdown.
@@ -64,9 +65,17 @@ function cells(line: string): string[] {
     .map((cell) => cell.trim());
 }
 
-export function Markdown({ source }: { source: string }) {
+export function Markdown({
+  source,
+  headingOffset = 0,
+}: {
+  source: string;
+  headingOffset?: number;
+}) {
   const lines = source.split('\n');
   const blocks: ReactNode[] = [];
+  // The most recent heading, so a table can be named after the section it sits in.
+  let lastHeading = 'Document';
 
   let i = 0;
   let key = 0;
@@ -86,9 +95,13 @@ export function Markdown({ source }: { source: string }) {
     // Headings -----------------------------------------------------------
     const heading = /^(#{1,4})\s+(.*)$/.exec(trimmed);
     if (heading !== null) {
-      const level = heading[1]?.length ?? 1;
+      // Shifted so a document embedded in a page does not claim the page's own h1:
+      // the thread title is the page heading, and two h1s tell a screen reader the
+      // page has two subjects.
+      const level = Math.min(6, (heading[1]?.length ?? 1) + headingOffset);
       const text = heading[2] ?? '';
-      const Tag = (['h1', 'h2', 'h3', 'h4'] as const)[level - 1] ?? 'h4';
+      lastHeading = text;
+      const Tag = (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const)[level - 1] ?? 'h6';
       blocks.push(<Tag key={k}>{inline(text, k)}</Tag>);
       i += 1;
       continue;
@@ -106,7 +119,7 @@ export function Markdown({ source }: { source: string }) {
       }
 
       blocks.push(
-        <div className="doc__tableWrap" key={k}>
+        <ScrollRegion className="doc__tableWrap" key={k} label={`${lastHeading} table`}>
           <table className="doc__table">
             <thead>
               <tr>
@@ -129,7 +142,7 @@ export function Markdown({ source }: { source: string }) {
               ))}
             </tbody>
           </table>
-        </div>,
+        </ScrollRegion>,
       );
 
       i = j;

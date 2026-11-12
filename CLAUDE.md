@@ -317,6 +317,21 @@ cover** — greenfield requirements and design, and a brownfield scan. The Task 
 the compliance injector have been exercised offline against the stub, which runs every
 line of the production path except the HTTP call, but not yet live.
 
+**Accessibility was audited with axe-core in a real browser, and fixed — with stated residuals.**
+It ran against the workspace (new spec, thread, requirements, tasks, context) in both
+themes, and against the sign-in, sign-up, home, docs and compare pages. The workspace and
+the auth, docs and compare pages finish with zero violations. It found real problems the
+tests had missed: the light palette this project introduced failed AA contrast, a headline
+sentence was `aria-hidden` with only a `<p aria-label>` standing in for it, scrollable
+regions could not be reached by keyboard, and the skip link had no target in the workspace.
+Residuals, not hidden: the home page's scroll-reveal manifesto starts at 1.4:1 by design
+(mitigated under `prefers-contrast: more`, not removed), one link inside the tilted hero
+mock-up is scaled below the 24px target size, and some `heading-order` findings remain on
+the product pages. **Not verified:** screen-reader output (axe cannot judge it), and
+focus restoration after a decision, which needs a real approval to exercise. A browser
+audit cannot run in CI here, so `apps/web/test/a11y.test.ts` pins the structural
+decisions only — it does not and cannot assert contrast or focus behaviour.
+
 **Three fixture repositories were planned; two were used** (`execa`, `requests`). The
 plan's cut order puts measurement breadth ahead of tests, CI, the verifier and the hook,
 all of which are intact.

@@ -275,7 +275,7 @@ export function Nav() {
               >
                 {m.cols.map((c) => (
                   <div key={c.h}>
-                    <h6>{c.h}</h6>
+                    <div className="gh">{c.h}</div>
                     {c.items.map((it) => (
                       <a className="mi" href={it.href} key={it.href + it.title}>
                         <span className={'ic ' + (it.tone ?? '')}>
