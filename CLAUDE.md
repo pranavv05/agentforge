@@ -332,6 +332,15 @@ focus restoration after a decision, which needs a real approval to exercise. A b
 audit cannot run in CI here, so `apps/web/test/a11y.test.ts` pins the structural
 decisions only — it does not and cannot assert contrast or focus behaviour.
 
+**Phone layout is designed, and verified only in emulation.** Below 54rem the thread rail
+becomes a drawer behind a top bar, the document becomes a sheet with a labelled way back,
+and touch targets are 44px. Checked in a real browser at 390px against the live pages:
+axe finds no violations on the thread, composer, requirements, tasks or context screens,
+and the drawer is out of the tab order when closed, takes focus when opened, and returns
+it on Escape. **Not verified:** a real device. The window could not be resized, so this
+used a 390px iframe; iOS Safari's focus zoom, safe-area insets and dynamic toolbar
+behaviour are therefore set from the documented rules and untested.
+
 **Three fixture repositories were planned; two were used** (`execa`, `requests`). The
 plan's cut order puts measurement breadth ahead of tests, CI, the verifier and the hook,
 all of which are intact.

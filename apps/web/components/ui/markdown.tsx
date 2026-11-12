@@ -75,7 +75,22 @@ export function Markdown({
   const lines = source.split('\n');
   const blocks: ReactNode[] = [];
   // The most recent heading, so a table can be named after the section it sits in.
-  let lastHeading = 'Document';
+  // The heading trail, by level, so a table can be named for where it sits. Naming it
+  // after only the nearest heading produced duplicates: every requirement has its own
+  // "Acceptance criteria" table, and landmarks of the same role must have unique names
+  // or a screen-reader user cannot tell one from the next.
+  // Sparse on purpose: a document that jumps from h2 to h4 leaves a hole at h3.
+  const trail: (string | undefined)[] = [];
+  const labelCount = new Map<string, number>();
+  const tableLabel = (): string => {
+    const named = trail.filter((entry): entry is string => entry !== undefined && entry.length > 0);
+    const base =
+      (named.length > 1 ? named.slice(-2).join(', ') : (named[0] ?? 'Document')) + ' table';
+    const seen = (labelCount.get(base) ?? 0) + 1;
+    labelCount.set(base, seen);
+    // The last resort: identical paths get an ordinal, which is ugly but unambiguous.
+    return seen === 1 ? base : `${base} ${String(seen)}`;
+  };
 
   let i = 0;
   let key = 0;
@@ -100,7 +115,10 @@ export function Markdown({
       // page has two subjects.
       const level = Math.min(6, (heading[1]?.length ?? 1) + headingOffset);
       const text = heading[2] ?? '';
-      lastHeading = text;
+      // Entering a heading discards everything at its level and deeper, so the trail
+      // is always the path from the top of the document to here.
+      trail.length = level - 1;
+      trail[level - 1] = text;
       const Tag = (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const)[level - 1] ?? 'h6';
       blocks.push(<Tag key={k}>{inline(text, k)}</Tag>);
       i += 1;
@@ -119,7 +137,7 @@ export function Markdown({
       }
 
       blocks.push(
-        <ScrollRegion className="doc__tableWrap" key={k} label={`${lastHeading} table`}>
+        <ScrollRegion className="doc__tableWrap" key={k} label={tableLabel()}>
           <table className="doc__table">
             <thead>
               <tr>

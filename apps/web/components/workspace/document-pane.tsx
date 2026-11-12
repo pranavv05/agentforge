@@ -58,6 +58,12 @@ export function DocumentPane({
   return (
     <aside className="pane" aria-label={`${kind} document`}>
       <header className="pane__head">
+        {/* Phone only (the stylesheet hides it elsewhere): the document is a sheet in
+            front of the conversation there, so it needs a labelled way back. */}
+        <Link className="pane__back" href={`/workspace/${specId}`}>
+          <span aria-hidden="true">←</span> Conversation
+        </Link>
+
         <span className="pane__name mono">{kind}.md</span>
 
         {versions.length > 1 && (

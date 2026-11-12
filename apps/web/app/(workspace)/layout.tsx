@@ -6,7 +6,7 @@ import { getDb } from '@agentforge/db';
 import { listSpecs } from '@agentforge/orchestrator';
 import { isAwaitingHuman } from '@agentforge/contract';
 import { getAuth } from '@/lib/auth';
-import { Rail } from '@/components/workspace/rail';
+import { Shell } from '@/components/workspace/shell';
 import { Announcer } from '@/components/workspace/announcer';
 import './workspace.css';
 
@@ -64,7 +64,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
 
       <div className="ws">
         <Announcer />
-        <Rail
+        <Shell
           threads={specs.map((spec) => ({
             id: spec.id,
             title: spec.title,
@@ -76,9 +76,9 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
             name: session.user.name,
             role: typeof role === 'string' && role.length > 0 ? role : 'reviewer',
           }}
-        />
-
-        {children}
+        >
+          {children}
+        </Shell>
       </div>
     </>
   );

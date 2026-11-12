@@ -186,6 +186,19 @@
 
 /* ----------------------------------------------------------------- rail */
 
+/* The wrapper exists for the phone drawer. On a desktop it must not exist as a box at
+   all, or the rail stops being a grid item and the layout shifts by a hair. */
+.railWrap {
+  display: contents;
+}
+
+.mbar,
+.scrim,
+.pane__back,
+.railWrap__head {
+  display: none;
+}
+
 .rail {
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -414,53 +427,6 @@
      thread; a 420px-wide requirements table is unreadable. */
   .stage--split .thread {
     display: none;
-  }
-}
-
-/*
- * Narrow screens stack rather than hide.
- *
- * The rail used to be `display: none` here, which left a phone with no navigation at
- * all and no way to get it back — every thread unreachable once you were in one. A
- * dense three-pane tool is never going to be pleasant at this width, but it has to stay
- * usable, and stacking costs nothing and hides nothing.
- */
-@media (max-width: 54rem) {
-  .ws {
-    position: absolute;
-    inset: 0;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    overflow-y: auto;
-  }
-
-  .rail {
-    border-right: 0;
-    border-bottom: 1px solid var(--ws-line);
-    /* Capped so the thread list cannot push the conversation off the screen. */
-    max-height: 45dvh;
-  }
-
-  .rail__list {
-    overflow-y: auto;
-  }
-
-  /* The document takes over from the conversation rather than sitting beside it. */
-  .stage--split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pane {
-    border-left: 0;
-  }
-
-  .thead,
-  .tfoot {
-    padding-inline: 1rem;
-  }
-
-  .thread__scroll {
-    padding: 1rem;
   }
 }
 
@@ -1871,4 +1837,294 @@
  */
 .stage:focus {
   outline: none;
+}
+
+/* ================================================================ phone layout */
+
+/*
+ * Below 54rem the workspace stops being three panes and becomes a stack of screens:
+ * a top bar, the conversation, and - when a document is open - the document in front.
+ *
+ * It used to stack the three panes vertically. That kept everything reachable, but the
+ * thread list, the "New spec" button and the account footer took around 60% of a phone
+ * before the conversation began, and the composer sat clipped at the bottom. Shrinking a
+ * sidebar does not fix a layout whose problem is that it is a sidebar, so the thread
+ * list is now a drawer behind a menu button, and the screen belongs to the thing you are
+ * actually doing.
+ */
+@media (max-width: 54rem) {
+  .ws {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  /* ---- top bar ------------------------------------------------------------ */
+
+  .mbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* env() is 0 unless the page opts in with viewport-fit=cover, which it does. */
+    padding: calc(0.4rem + env(safe-area-inset-top)) calc(0.6rem + env(safe-area-inset-right))
+      0.4rem calc(0.6rem + env(safe-area-inset-left));
+    border-bottom: 1px solid var(--ws-line);
+    background: var(--ws-ground);
+  }
+
+  .mbar__menu {
+    display: grid;
+    place-items: center;
+    /* 44px: the size a thumb can hit reliably. The desktop controls are 26px. */
+    inline-size: 44px;
+    block-size: 44px;
+    margin-inline-start: -0.4rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--ws-r);
+    background: none;
+    color: var(--ws-ink);
+    cursor: pointer;
+  }
+
+  .mbar__menu svg {
+    inline-size: 22px;
+    block-size: 22px;
+  }
+
+  .mbar__menu:hover,
+  .mbar__menu[aria-expanded='true'] {
+    background: var(--ws-surface);
+  }
+
+  .mbar__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-inline-end: auto;
+    color: var(--ws-ink);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .mbar__new {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-block-size: 36px;
+    padding: 0 0.8rem;
+    border: 1px solid var(--ws-line-strong);
+    border-radius: var(--ws-r);
+    background: var(--ws-raised);
+    color: var(--ws-ink);
+    font-size: var(--ws-t);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  /* ---- the thread list becomes a drawer ----------------------------------- */
+
+  .railWrap {
+    display: block;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 50;
+    inline-size: min(20rem, 86vw);
+    transform: translateX(-100%);
+    /* Hidden, not just off-screen: a closed drawer must leave the tab order and the
+       accessibility tree, or a keyboard user tabs into thread links they cannot see.
+       The delay lets the slide finish before the visibility flips. */
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+    box-shadow: var(--ws-shadow);
+  }
+
+  .railWrap.is-open {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .railWrap .rail {
+    block-size: 100%;
+    border-right: 1px solid var(--ws-line);
+  }
+
+  .railWrap {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: var(--ws-sunken);
+  }
+
+  .railWrap__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(0.4rem + env(safe-area-inset-top)) 0.4rem 0.4rem 1rem;
+    border-bottom: 1px solid var(--ws-line);
+  }
+
+  .railWrap__title {
+    font-size: var(--ws-t);
+    font-weight: 600;
+    color: var(--ws-ink);
+  }
+
+  .railWrap__close {
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--ws-r);
+    background: none;
+    color: var(--ws-muted);
+    cursor: pointer;
+  }
+
+  .railWrap__close svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+
+  .railWrap__close:hover {
+    background: var(--ws-surface);
+    color: var(--ws-ink);
+  }
+
+  /* The top bar already carries the brand and the new-spec action. */
+  .railWrap .rail__top {
+    display: none;
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    background: rgb(8 12 20 / 0.45);
+    cursor: default;
+  }
+
+  /* ---- the screens -------------------------------------------------------- */
+
+  .stage--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .thead,
+  .tfoot {
+    padding-inline: 1rem;
+  }
+
+  .thead {
+    gap: 0.4rem;
+    padding-block: 0.7rem;
+  }
+
+  /* Cost figures move into one quiet row under the chips instead of a column that
+     fights the title for width. */
+  .thead__stats {
+    inline-size: 100%;
+    justify-content: flex-start;
+    gap: 1.25rem;
+  }
+
+  .thead__stats > div {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  .thread__scroll {
+    padding: 1rem;
+  }
+
+  /* ---- the document is a sheet in front of the conversation --------------- */
+
+  .pane {
+    border-left: 0;
+  }
+
+  .pane__head {
+    gap: 0.5rem;
+    padding-block: 0.4rem;
+  }
+
+  /* A labelled way back. The close mark is a 20px target that says nothing about where
+     it goes, and on a phone "close" is not obviously "return to the conversation". */
+  .pane__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-block-size: 44px;
+    margin-inline-start: -0.4rem;
+    padding: 0 0.6rem;
+    border-radius: var(--ws-r);
+    color: var(--ws-ink);
+    font-size: var(--ws-t);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .pane__back:hover {
+    background: var(--ws-surface);
+  }
+
+  .pane__close {
+    display: none;
+  }
+
+  .hashRow {
+    padding-inline: 1rem;
+  }
+
+  .pane__doc {
+    padding-inline: 1rem;
+  }
+
+  /* Approval controls stay on screen while the document scrolls above them, and clear
+     the home indicator rather than sitting under it. */
+  .decide {
+    padding-block-end: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .tfoot {
+    padding-block-end: calc(0.6rem + env(safe-area-inset-bottom));
+  }
+
+  /* ---- touch -------------------------------------------------------------- */
+
+  .composer__input,
+  .composer__repo,
+  .decide__comment,
+  .ans__input {
+    /* Below 16px iOS Safari zooms the page when a field is focused, and does not zoom
+       back out. */
+    font-size: 1rem;
+  }
+
+  .composer__modes button,
+  .tfoot__go,
+  .decide__go,
+  .ans__go,
+  .decide__row button {
+    min-block-size: 44px;
+  }
+
+  .rail__item {
+    padding-block: 0.7rem;
+  }
+
+  .empty {
+    padding: 1.25rem 1rem;
+    align-content: start;
+  }
 }

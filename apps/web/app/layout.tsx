@@ -34,6 +34,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Lets the workspace top bar and composer sit inside a notch or home indicator instead
+  // of under it. Without this, env(safe-area-inset-*) is always 0.
+  viewportFit: 'cover',
   // The warm paper ground, so the browser chrome matches the page instead of flashing
   // white on load.
   themeColor: '#f8f7f3',

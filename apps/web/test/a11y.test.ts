@@ -6,6 +6,8 @@ import { Markdown } from '@/components/ui/markdown';
 import { authPage } from '@/lib/site/auth';
 import { footer, nav } from '@/lib/site/layout';
 import { labelFor, toneFor } from '@/components/workspace/status';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { SPEC_STATES } from '@agentforge/contract';
 
 /**
@@ -58,6 +60,52 @@ describe('document headings inside the workspace', () => {
     // document with ten tables used to put ten identical stops in the tab order.
     expect(html).toContain('doc__tableWrap');
     expect(html).not.toContain('tabindex');
+  });
+});
+
+describe('table region names', () => {
+  // A scrolling table becomes a landmark once it overflows, and landmarks of the same
+  // role need unique names or a screen-reader user cannot tell them apart. At phone
+  // width several tables overflow at once, and every requirement has its own
+  // "Acceptance criteria" table — so the nearest heading alone produces duplicates.
+  const table = ['| A | B |', '| --- | --- |', '| 1 | 2 |'];
+
+  it('are named by the heading path, not only the nearest heading', async () => {
+    const { ScrollRegion } = await import('@/components/ui/scroll-region');
+    expect(ScrollRegion).toBeDefined();
+
+    const source = [
+      '## REQ-001 Export',
+      '',
+      '### Acceptance criteria',
+      '',
+      ...table,
+      '',
+      '## REQ-002 Validate',
+      '',
+      '### Acceptance criteria',
+      '',
+      ...table,
+    ].join('\n');
+
+    // ScrollRegion only emits the label once measured, so read it from the props the
+    // renderer passed rather than from server markup.
+    const labels: string[] = [];
+    const element = Markdown({ source });
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) node.forEach(walk);
+      else if (typeof node === 'object' && node !== null && 'props' in node) {
+        const props = (node as { props: { label?: unknown; children?: unknown } }).props;
+        if (typeof props.label === 'string') labels.push(props.label);
+        walk(props.children);
+      }
+    };
+    walk(element);
+
+    expect(labels).toHaveLength(2);
+    expect(new Set(labels).size, labels.join(' | ')).toBe(2);
+    expect(labels[0]).toContain('REQ-001');
+    expect(labels[1]).toContain('REQ-002');
   });
 });
 
@@ -117,5 +165,44 @@ describe('the shared marketing chrome', () => {
   it('has no empty heading in the navigation', () => {
     // The dropdown used `<h6>&nbsp;</h6>` for spacing.
     expect(nav(false)).not.toMatch(/<h[1-6][^>]*>(\s|&nbsp;)*<\/h[1-6]>/);
+  });
+});
+
+describe('the phone layout', () => {
+  /*
+   * These read the stylesheet, which is a blunt instrument and said so plainly: they do
+   * not prove the layout works (the browser checks did that), they stop the three
+   * properties an accessibility regression would hinge on from being edited away by
+   * someone tidying CSS.
+   */
+  const css = readFileSync(
+    join(import.meta.dirname, '..', 'app', '(workspace)', 'workspace.css'),
+    'utf8',
+  );
+  const phone = css.slice(css.indexOf('@media (max-width: 54rem)'));
+
+  it('removes a closed drawer from the tab order and accessibility tree', () => {
+    // Off-screen is not hidden: a drawer that is merely translated away still takes
+    // keyboard focus, so a user tabs into links they cannot see.
+    const closed = /\.railWrap\s*\{[^}]*visibility:\s*hidden/.exec(phone);
+    const open = /\.railWrap\.is-open\s*\{[^}]*visibility:\s*visible/.exec(phone);
+
+    expect(closed, 'closed drawer must be visibility: hidden').not.toBeNull();
+    expect(open, 'open drawer must be visibility: visible').not.toBeNull();
+  });
+
+  it('keeps form fields at 16px so iOS does not zoom on focus', () => {
+    expect(phone).toMatch(/\.composer__input[^}]*font-size:\s*1rem/s);
+  });
+
+  it('makes primary touch controls at least 44px tall', () => {
+    expect(phone).toMatch(/\.mbar__menu\s*\{[^}]*block-size:\s*44px/s);
+    expect(phone).toMatch(/\.tfoot__go[^}]*min-block-size:\s*44px/s);
+  });
+
+  it('does not render the wrapper as a box on desktop', () => {
+    // display: contents is what keeps the rail a direct grid item. Without it the
+    // desktop layout shifts, and nothing would fail loudly.
+    expect(css).toMatch(/\.railWrap\s*\{\s*display:\s*contents/);
   });
 });
