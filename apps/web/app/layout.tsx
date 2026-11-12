@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import './globals.css';
+import './root.css';
 
 /**
  * The root layout.
@@ -41,7 +41,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The marketing layout sets `js` and `sj` on this element before hydration, so
+    // the server HTML and the client DOM differ here by design. Suppression is
+    // scoped to this one element and does not extend to its children.
+    <html lang="en" suppressHydrationWarning>
       <body>
         <a className="skip-link" href="#main">
           Skip to content

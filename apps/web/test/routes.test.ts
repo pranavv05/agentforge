@@ -28,7 +28,7 @@ const API_DIR = fileURLToPath(new URL('../app/api', import.meta.url));
 const PENDING: Readonly<Partial<Record<RouteName, string>>> = {};
 
 /**
- * Route prefixes owned by a library rather than by the contract.
+ * Route prefixes that are deliberately outside the frozen contract.
  *
  * `packages/contract` describes the spec API — the surface the frontend and the
  * examiners reason about. Better Auth's endpoints live under /api/auth and their paths,
@@ -36,13 +36,24 @@ const PENDING: Readonly<Partial<Record<RouteName, string>>> = {};
  * ROUTES would make a frozen contract claim to describe something this project does not
  * control, and it would go stale the first time the dependency is upgraded.
  *
+ * `/api/public` is the marketing site's demo surface: the transition explorer, the
+ * edit-hook tester, the compliance lint, the TDS calculator and the grounding
+ * playground. They are unauthenticated, read-only, and pure functions of data this
+ * repository already ships — no spec is touched and no model is called.
+ *
+ * They are excluded for the opposite reason to Better Auth's: not because someone else
+ * owns them, but because the contract describes the product's API and these exist to
+ * show a marketing page working. Declaring them would widen a frozen contract for the
+ * sake of a demo, and every client generated from it would gain endpoints no client
+ * should call.
+ *
  * The exemption is a prefix list rather than a blanket skip, so a stray handler written
  * anywhere else is still caught.
  */
-const LIBRARY_OWNED: readonly string[] = ['/api/auth/'];
+const OUTSIDE_CONTRACT: readonly string[] = ['/api/auth/', '/api/public/'];
 
-function isLibraryOwned(path: string): boolean {
-  return LIBRARY_OWNED.some((prefix) => path.startsWith(prefix));
+function isOutsideContract(path: string): boolean {
+  return OUTSIDE_CONTRACT.some((prefix) => path.startsWith(prefix));
 }
 
 /** Walks the api directory and returns the route path of every `route.ts`. */
@@ -91,7 +102,7 @@ describe('route manifest', () => {
   it('implements no route the contract does not declare', () => {
     const undocumented = implementedRoutes()
       .filter((path) => !manifestPaths.has(path))
-      .filter((path) => !isLibraryOwned(path));
+      .filter((path) => !isOutsideContract(path));
     expect(undocumented, 'route handlers with no entry in the ROUTES manifest').toEqual([]);
   });
 
@@ -99,7 +110,7 @@ describe('route manifest', () => {
     // Keeps the exemption list honest: if the auth routes are ever removed or moved, the
     // stale prefix fails here instead of quietly widening what the manifest test ignores.
     const implemented = implementedRoutes();
-    const unused = LIBRARY_OWNED.filter(
+    const unused = OUTSIDE_CONTRACT.filter(
       (prefix) => !implemented.some((path) => path.startsWith(prefix)),
     );
     expect(unused, 'library-owned prefixes matching no handler').toEqual([]);

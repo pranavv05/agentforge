@@ -34,3 +34,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# The frontend track's own checkout. Its UI was ported into apps/web; the directory is
+# kept locally for reference but is not part of this tree.
+landing page/

@@ -17,3 +17,9 @@ apps/web/next-env.d.ts
 # business, not a style matter — and reformatting one would change nothing a human
 # reads while making every recording show up as a diff.
 packages/llm/cassettes/
+
+# The frontend track's own checkout, kept for reference after its UI was ported into
+# apps/web. Not our source tree and not on our toolchain.
+landing page/
+# Static assets served as-is to the browser.
+apps/web/public/

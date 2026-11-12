@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -10,6 +11,11 @@ export default tseslint.config(
       '**/coverage/**',
       'fixtures/repos/**',
       '**/*.wasm',
+      // Static assets served as-is to the browser, not source we compile.
+      'apps/web/public/**',
+      // The frontend track's own checkout, kept for reference after its UI was
+      // ported into apps/web. Not our source tree and not on our toolchain.
+      'landing page/**',
     ],
   },
   js.configs.recommended,
@@ -79,6 +85,14 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       'no-warning-comments': 'off',
     },
+  },
+  // Code that runs in the browser. `no-undef` from eslint's recommended set does not
+  // know about `document`, `location` or `requestAnimationFrame`, so without this it
+  // reports every one of them as undefined. This declares where the browser actually
+  // is, rather than switching the rule off everywhere.
+  {
+    files: ['apps/web/components/**/*.{ts,tsx}', 'apps/web/app/**/*.{ts,tsx}'],
+    languageOptions: { globals: globals.browser },
   },
   {
     files: ['**/*.js'],

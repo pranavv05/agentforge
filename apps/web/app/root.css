@@ -1,0 +1,40 @@
+/*
+ * The only styles that belong to every route group.
+ *
+ * The root layout renders the skip link for marketing pages, auth pages and the
+ * workspace alike, so its styling has to load everywhere too. It used to live in
+ * `globals.css`, which moved into `(workspace)` when the marketing site arrived with
+ * its own stylesheet — and the skip link promptly appeared as plain text at the top of
+ * every marketing page, because the rule that hides it was no longer loaded.
+ *
+ * Self-contained on purpose: no custom properties from either stylesheet, so it cannot
+ * break again by being separated from one of them.
+ */
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  border-radius: 0 0 6px 6px;
+  background: #111317;
+  color: #fff;
+  font:
+    500 14px/1.2 system-ui,
+    sans-serif;
+  text-decoration: none;
+  /* Off-screen rather than `display: none`, so it is still reachable by tab. */
+  transform: translateY(-110%);
+  transition: transform 0.18s ease-out;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
