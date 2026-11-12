@@ -237,7 +237,7 @@ The suites that are load-bearing rather than incidental:
 
 ## Current state
 
-Days 1-5 of 5; CI green throughout, 817 tests. Every stage has now been run against a
+Days 1-5 of 5; CI green throughout, 1041 tests. Every stage has now been run against a
 live model.
 
 - **Day 1** — contract frozen, schema and orchestrator built and tested, read and
@@ -300,12 +300,20 @@ recorded in each rule's `source_conflict_note` and asserted by tests so they can
 tidied away. Confirm every rate, threshold and code against the CBDT portal and the
 current NIC e-invoice schema before any real use.
 
-**The agentic ablation has not been run.** The ablation arms compare *retrieval*
-deterministically, over 15 commits per repository, for nothing. Running the full agentic
-loop per arm per commit would measure the system as used, but costs money per run and
-varies between runs, so it would cover a handful of commits at best. The deterministic
-figures are the ones with a spread behind them, and the report should not present them as
-the other thing.
+**The agentic ablation runner is built and tested; the full run was NOT completed.**
+`npm run eval:agentic -- <repo>... ` runs the full Context Agent once per arm per mined
+commit (same commits and leakage-controlled worktrees as `npm run eval`, module summaries
+skipped, scored over files cited in *verified* claims, only commits where every arm
+completed). Every run is journalled to `journal.jsonl` as it finishes, so it resumes without
+re-paying; a total budget and a per-run cap stop spend. The offline end-to-end test (real git
+repo, stubbed transport) is in `eval/test/agentic.test.ts`. A live pilot of one execa commit
+x 4 arms cost $0.037, and a full launch was stopped by the user after 20 runs ($0.163, no
+failures, about $0.008 per run); the journal is at `D:/tmp/fixtures/agentic/journal.jsonl`
+and a re-run resumes from it. **There is no agentic results table yet**, and the README does
+not claim one. Recall@1/5 and MRR from this runner depend on the order the agent lists its
+files, since evidence `relevance` is free text; recall@10/20 are the figures to trust. The
+deterministic ablation was re-run on fresh clones (execa `247faa0`, requests `3c7baaa`) and
+reproduced the earlier table exactly.
 
 **The `fts_repomap_embed` arm has been removed from the contract.** It was the plan's
 optional local-embedding arm; it was named in the frozen contract but never implemented,

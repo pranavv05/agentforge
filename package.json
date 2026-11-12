@@ -31,7 +31,8 @@
     "sdd:smoke:brownfield": "tsx scripts/smoke-brownfield.ts",
     "eval": "tsx scripts/eval.ts",
     "sdd:smoke:implement": "tsx scripts/smoke-implement.ts",
-    "sdd:smoke:tasks": "tsx scripts/smoke-tasks.ts"
+    "sdd:smoke:tasks": "tsx scripts/smoke-tasks.ts",
+    "eval:agentic": "tsx scripts/eval-agentic.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

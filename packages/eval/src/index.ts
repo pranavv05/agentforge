@@ -46,3 +46,20 @@ export {
   type RepoResult,
   type RunOptions,
 } from './run.ts';
+
+export {
+  AgenticRunRecordSchema,
+  citedFiles,
+  queryFor,
+  readJournal,
+  renderAgentic,
+  runAgenticAblation,
+  runKey,
+  scoreAgentic,
+  type AgenticArmSummary,
+  type AgenticOptions,
+  type AgenticOutcome,
+  type AgenticRepoResult,
+  type AgenticResult,
+  type AgenticRunRecord,
+} from './agentic.ts';
