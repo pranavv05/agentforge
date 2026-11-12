@@ -20,7 +20,7 @@ import {
  * The landing page.
  *
  * Every section here corresponds to something the product does. The page arrived with a
- * "bring your own key" section offering to store a Claude key encrypted per user, and a
+ * per-user API key vault offering to store a Claude key encrypted per account, and a
  * demo-workspace button; both were removed rather than reworded, because this codebase
  * has one server-side key in `.env` and no demo endpoint, and a marketing page is a
  * claim you have to be able to defend.

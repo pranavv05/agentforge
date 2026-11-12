@@ -232,7 +232,7 @@ function AgentCursor({ stage }: { stage: React.RefObject<HTMLElement | null> }) 
       {
         sel: '.hs-win .side a:nth-of-type(3)',
         who: 'Context agent',
-        say: 'reading acme-erp\u2026',
+        say: 'reading your repository\u2026',
       },
       { sel: '.hs-kpis a:nth-child(2)', who: 'Verifier', say: '92% of claims verified' },
       { sel: '.fchip.c1', who: 'Verifier', say: 'tds.ts:L9-17 \u2713' },

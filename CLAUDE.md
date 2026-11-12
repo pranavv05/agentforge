@@ -332,6 +332,25 @@ focus restoration after a decision, which needs a real approval to exercise. A b
 audit cannot run in CI here, so `apps/web/test/a11y.test.ts` pins the structural
 decisions only — it does not and cannot assert contrast or focus behaviour.
 
+**The marketing site is a port, not a mirror, and further frontend work cannot be merged
+mechanically.** It began as the frontend track's own Next.js app with a parallel backend
+(its own API, database, auth and a second orchestrator). Only the interface was taken: it
+lives in `apps/web/components/site`, `apps/web/lib/site` and `apps/web/content/docs`,
+reads the real compliance pack and transition table, and was patched to this project's
+strictness (`noUncheckedIndexedAccess`, no `any`). Per-user API keys and a demo workspace
+were **cut**, because this codebase cannot back them, and the docs were rewritten against
+the real routes. Two remote branches exist and **neither is merged, and neither is an
+update to this port**: `feature/landing_page` is an earlier Hono / Cloudflare Workers / D1
+generation of the same site (including the very claims that were cut), and
+`tejas.frontend` is a separate static "Groundwork" page embedded in an `<iframe>`, written
+against a root layout that no longer exists. To adopt more work from that track: take it
+into `apps/web/components/site` or `lib/site` by hand, never paste in its backend, and let
+`apps/web/test/site-claims.test.ts` decide — it fails the build on claims the product
+cannot back (per-user keys, a demo workspace, "simulated" output, another stack's names)
+and on any `/api` path in the docs that is not an implemented route. Those guards were
+mutation-tested: injecting a banned phrase and a fake route fails them. They are blunt on
+purpose, and they cannot judge whether a *new* kind of false claim is false.
+
 **Runs are now followed live, and "quiet" is an inference, not a fact.** The footer follows
 a run over the SSE route, showing elapsed time and this run's spend, and refreshes the
 thread when the state changes. It exists because the old footer treated a spec that was

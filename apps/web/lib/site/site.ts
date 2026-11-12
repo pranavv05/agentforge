@@ -172,7 +172,7 @@ ${more}
   <div class="tally" id="gv-tally"></div>
  </div>
  <div class="panel">
-  <h3>The repository</h3><p class="hint" id="gv-repo">acme-erp (embedded sample repo)</p>
+  <h3>The repository</h3><p class="hint" id="gv-repo">agentforge (this project's own source)</p>
   <div class="flist" id="gv-flist"></div>
   <pre class="cv" id="gv-code" tabindex="0" aria-label="File contents"><span class="r">Loading&hellip;</span></pre>
   <p class="hint-r">Blue rows are the lines the claim points at. Amber rows are lines the verifier says do not exist.</p>
